@@ -4,7 +4,7 @@ NYU Tandon, ECE-GY 9143: High Performance Machine Learning, End Semester Project
 ## Project:
 Optimize the process of domain adaptation in natural language processing, i.e., fine-tuning large language models for a particular domain on limited hardware . This is done by using 8-bit quantization, LoRA and other techniques.
 
-## Repoitory:
+## Repository:
 - Fine_Tuning.ipynb: Main notebook for training and evaluation
 - train_v4.py: Same script as ipynb in python script form, for submitting a sbatch job
 - Inference.ipynb: Inference notebook, for generating text from a saved model
