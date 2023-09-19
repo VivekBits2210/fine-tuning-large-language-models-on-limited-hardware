@@ -1,12 +1,21 @@
+from typing import Optional
 import logging
+logger = logging.getLogger()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
 
 
 class LogConfig:
     @staticmethod
     def setup_logging():
-        logger = logging.getLogger()
         logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
         ch = logging.StreamHandler()
         ch.setFormatter(formatter)
         logger.addHandler(ch)
+
+    @staticmethod
+    def set_logging_level(level: str):
+        level: Optional[int] = getattr(logging, level.upper(), None)
+        if isinstance(level, int):
+            logger.setLevel(level=level)
+        else:
+            raise ValueError(f"Invalid logging level: {level}!")

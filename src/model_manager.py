@@ -1,10 +1,12 @@
 from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
 
+from config.system_configuration import SystemConfiguration
+
 
 class ModelManager:
-    def __init__(self, device: str) -> None:
-        self.device = device
+    def __init__(self, system_config: SystemConfiguration) -> None:
+        self.device = system_config.device
         self.model = None
         self.model_name: Optional[str] = None
 
@@ -15,6 +17,7 @@ class ModelManager:
 
     def load(self, model_name: str) -> None:
         self.model_name = model_name
+
         configuration = AutoConfig.from_pretrained(self.model_name)
         self.model = AutoModelForCausalLM.from_pretrained(self.model_name, config=configuration)
         self.model.to(self.device)

@@ -4,19 +4,19 @@ from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
 from tokenizer import Tokenizer
+from config.user_configuration import UserConfiguration
+from config.system_configuration import SystemConfiguration
 
 
 class DataManager:
     def __init__(self,
                  tokenizer: Tokenizer,
-                 system_config: "SystemConfig",
-                 user_config: "UserConfig",
-                 data_prep_config: "DataPrepConfig"
+                 user_config: UserConfiguration,
+                 system_config: SystemConfiguration
                  ) -> None:
         self.tokenizer = tokenizer
-        self.system_config = system_config
         self.user_config = user_config
-        self.data_prep_config = data_prep_config
+        self.system_config = system_config
         self.dataset = None
         self.tokenized_dataset = None
 
@@ -31,7 +31,6 @@ class DataManager:
     def create_tokenized_dataset(self, save_to_disk: bool = True) -> None:
         self.tokenized_dataset = self.dataset.map(
             self.tokenizer.run,
-            fn_kwargs={'data_prep_config': self.data_prep_config},
             batched=True,
             num_proc=self.system_config.num_workers,
             remove_columns=["text", "meta"],

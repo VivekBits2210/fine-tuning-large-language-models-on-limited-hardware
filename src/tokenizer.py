@@ -1,10 +1,14 @@
 from transformers import AutoTokenizer
 from transformers import DataCollatorForLanguageModeling
 
+from config.user_configuration import UserConfiguration
+from config.tokenizer_configuration import TokenizerConfiguration
+
 
 class Tokenizer:
-    def __init__(self, user_config) -> None:
+    def __init__(self, user_config: UserConfiguration, tokenization_config: TokenizerConfiguration) -> None:
         self.user_config = user_config
+        self.tokenization_config = tokenization_config
         self.tokenizer = None
         self.data_collator = None
 
@@ -21,11 +25,11 @@ class Tokenizer:
     def __set_data_collator(self) -> None:
         self.data_collator = DataCollatorForLanguageModeling(tokenizer=self.tokenizer, mlm=False)
 
-    def run(self, data, data_prep_config):
+    def run(self, data):
         return self.tokenizer(
             data["text"],
-            padding=data_prep_config.padding_strategy,
-            truncation=True,
-            max_length=data_prep_config.max_tokens,
-            return_attention_mask=True
+            padding=self.tokenization_config.padding_strategy,
+            truncation=self.tokenization_config.truncation,
+            max_length=self.tokenization_config.max_tokens,
+            return_attention_mask=self.tokenization_config.return_attention_mask
         )
