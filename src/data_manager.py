@@ -50,7 +50,7 @@ class DataManager:
                 )
             )
 
-    def train_validation_split(self, split_ratio: float = 0.9, save_to_disk=True):
+    def fetch_train_validation_split(self, split_ratio: float = 0.9, save_to_disk=True):
         if not self.tokenized_dataset:
             raise ValueError("You need to tokenize the dataset first!")
 
@@ -76,7 +76,7 @@ class DataManager:
 
         return datasets['train'], datasets['valid']
 
-    def train_validation_split_from_disk(self):
+    def fetch_train_validation_split_from_disk(self):
         train_path = self.user_config.train_dataset_path_generator(
             self.dataset_name,
             self.tokenizer.tokenization_config.tokenizer_name
@@ -98,7 +98,7 @@ class DataManager:
             logger.warning(f"The validation dataset path does not exist!")
         return training_dataset, validation_dataset
 
-    def create_dataloader(self, training_dataset, batch_size, validation_dataset=None):
+    def fetch_dataloaders(self, training_dataset, batch_size, validation_dataset=None):
         training_dataloader = DataLoader(training_dataset,
                                          sampler=RandomSampler(training_dataset),
                                          batch_size=batch_size,
