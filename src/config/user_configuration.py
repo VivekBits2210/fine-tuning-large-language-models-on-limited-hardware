@@ -13,3 +13,7 @@ class UserConfiguration:
 
         self.model_path_generator = lambda model, dataset, tokenizer_name: f"{self.root_path}/models/fine_tuned_{model}_{dataset}_{tokenizer_name}"
         self.logs_path_generator = lambda model, dataset, tokenizer_name: f"{self.root_path}/logs/fine_tuned_{model}_{dataset}_{tokenizer_name}"
+
+    def commit(self):
+        # TODO: Create root, data and cache folders if they are missing
+        pass
