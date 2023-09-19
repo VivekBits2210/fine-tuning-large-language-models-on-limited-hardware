@@ -3,18 +3,20 @@ from typing import Optional
 from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
-from tokenization import TokenizerFactory
+from tokenization import Tokenizer
 
 
 class DataHandler:
     def __init__(self,
-                 tokenization_factory: TokenizerFactory,
+                 tokenizer: Tokenizer,
                  system_config: "SystemConfig",
-                 user_config: "UserConfig"
+                 user_config: "UserConfig",
+                 data_prep_config: "DataPrepConfig"
                  ) -> None:
-        self.tokenization_factory = tokenization_factory
+        self.tokenizer = tokenizer
         self.system_config = system_config
         self.user_config = user_config
+        self.data_prep_config = data_prep_config
         self.dataset = None
         self.tokenized_dataset = None
 
@@ -26,12 +28,10 @@ class DataHandler:
                                     cache_dir=self.user_config.cache_path)
         return self.dataset
 
-    def tokenize(self, tokenizing_function, tokenizer=None, save_to_disk: bool = True) -> None:
-        if not tokenizer:
-            tokenizer = self.tokenization_factory.tokenizer
+    def create_tokenized_dataset(self, save_to_disk: bool = True) -> None:
         self.tokenized_dataset = self.dataset.map(
-            tokenizing_function,
-            fn_kwargs={'tokenizer': tokenizer},
+            self.tokenizer.run,
+            fn_kwargs={'data_prep_config': self.data_prep_config},
             batched=True,
             num_proc=self.system_config.num_workers,
             remove_columns=["text", "meta"],
@@ -64,12 +64,12 @@ class DataHandler:
             valid_dataset = load_from_disk(self.user_config.valid_dataset_path)
         return train_dataset, valid_dataset
 
-    def create_dataloaders(self, train_dataset, batch_size, valid_dataset=None):
+    def create_dataloader(self, train_dataset, batch_size, valid_dataset=None):
         train_dataloader = DataLoader(train_dataset,
                                       sampler=RandomSampler(train_dataset),
                                       batch_size=batch_size,
                                       num_workers=self.system_config.num_workers,
-                                      collate_fn=self.tokenization_factory.data_collator,
+                                      collate_fn=self.tokenizer.data_collator,
                                       pin_memory=True)
 
         valid_dataloader = None
@@ -78,7 +78,7 @@ class DataHandler:
                                           sampler=SequentialSampler(valid_dataset),
                                           batch_size=batch_size,
                                           num_workers=self.system_config.num_workers,
-                                          collate_fn=self.tokenization_factory.data_collator,
+                                          collate_fn=self.tokenizer.data_collator,
                                           pin_memory=True)
 
         return train_dataloader, valid_dataloader
