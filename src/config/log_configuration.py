@@ -6,7 +6,7 @@ logger = logging.getLogger()
 formatter = logging.Formatter(FORMAT)
 
 
-class LogConfig:
+class LogConfiguration:
     @staticmethod
     def setup_logging():
         logger.setLevel(logging.INFO)
