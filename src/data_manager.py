@@ -50,17 +50,14 @@ class DataManager:
                 )
             )
 
-    def train_validation_split(self, tokenized_dataset: Dataset = None, split_ratio: float = 0.9, save_to_disk=True):
-        if not tokenized_dataset:
-            if not self.tokenized_dataset:
-                raise ValueError("You need to tokenize the dataset first!")
+    def train_validation_split(self, split_ratio: float = 0.9, save_to_disk=True):
+        if not self.tokenized_dataset:
+            raise ValueError("You need to tokenize the dataset first!")
 
-            tokenized_dataset = self.tokenized_dataset
-
-        train_size = int(split_ratio * len(tokenized_dataset))
+        train_size = int(split_ratio * len(self.tokenized_dataset))
         datasets = DatasetDict({
-            'train': Dataset.from_dict(tokenized_dataset[:train_size]),
-            'valid': Dataset.from_dict(tokenized_dataset[train_size:])
+            'train': Dataset.from_dict(self.tokenized_dataset[:train_size]),
+            'valid': Dataset.from_dict(self.tokenized_dataset[train_size:])
         })
 
         if save_to_disk:

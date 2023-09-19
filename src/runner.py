@@ -4,6 +4,7 @@ from config import UserConfiguration, LogConfiguration, TorchConfiguration, Toke
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
+from model_manager import ModelManager
 from system_monitor import SystemMonitor
 
 from tokenizer import Tokenizer
@@ -62,7 +63,14 @@ if __name__ == "__main__":
     # Datasets
     data_manager = DataManager(tokenizer, user_config, system_config)
     data_manager.dataset_name = DATASET_NAME
-    training_dataset, validation_dataset = data_manager.train_validation_split_from_disk()
+    data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
+                                                    jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst",
+                                                    save_to_disk=False)
+    data_manager.create_tokenized_dataset(save_to_disk=False)
+    training_dataset, validation_dataset = data_manager.train_validation_split(save_to_disk=False)
+
+    # Load from disk
+    # training_dataset, validation_dataset = data_manager.train_validation_split_from_disk()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.create_dataloader(
@@ -70,3 +78,8 @@ if __name__ == "__main__":
         validation_dataset=validation_dataset,
         batch_size=BATCH_SIZE
     )
+
+    # Model
+    model_manager = ModelManager(system_config)
+    model_manager.load(MODEL_NAME)
+    logger.info(model_manager.model)
