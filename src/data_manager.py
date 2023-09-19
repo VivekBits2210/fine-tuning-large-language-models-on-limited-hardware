@@ -3,10 +3,10 @@ from typing import Optional
 from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
-from tokenization import Tokenizer
+from tokenizer import Tokenizer
 
 
-class DataHandler:
+class DataManager:
     def __init__(self,
                  tokenizer: Tokenizer,
                  system_config: "SystemConfig",

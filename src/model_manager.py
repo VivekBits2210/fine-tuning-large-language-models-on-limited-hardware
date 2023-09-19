@@ -2,7 +2,7 @@ from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
 
 
-class ModelHander:
+class ModelManager:
     def __init__(self, device: str) -> None:
         self.device = device
         self.model = None

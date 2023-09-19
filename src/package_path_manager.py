@@ -2,7 +2,7 @@ from typing import List
 import sys
 
 
-class PackageManager:
+class PackagePathManager:
     INTEL_PATH = "/share/apps/python/3.8.6/intel/lib/python3.8/site-packages"
 
     def __init__(self, net_id: str):

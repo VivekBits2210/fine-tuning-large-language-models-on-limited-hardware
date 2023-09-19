@@ -2,7 +2,7 @@ import os
 from typing import Dict, Any
 
 
-class OSConfiguration:
+class OSEnvironmentManager:
     def __init__(self) -> None:
         self.env = dict(os.environ)
 
