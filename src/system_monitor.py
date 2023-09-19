@@ -19,8 +19,7 @@ class SystemMonitor:
             logger.error(f"Error initializing NVML: {e}")
             return False
 
-    @classmethod
-    def get_ram_usage(cls):
+    def get_ram_usage(self):
         return Process().memory_info().rss / (1024 * 1024)
 
     def get_gpu_memory_usage(self):
@@ -36,7 +35,6 @@ class SystemMonitor:
             logger.error(f"Error retrieving GPU memory info: {e}")
             return None
 
-    def print_gpu_utilization(self):
+    def get_gpu_utilization(self):
         gpu_memory = self.get_gpu_memory_usage()
-        if gpu_memory is not None:
-            logger.info(f"GPU memory occupied: {gpu_memory} MB.")
+        return gpu_memory
