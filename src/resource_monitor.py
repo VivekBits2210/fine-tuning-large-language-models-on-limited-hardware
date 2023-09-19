@@ -8,15 +8,20 @@ logger = logging.getLogger(__name__)
 class SystemMonitor:
     def __init__(self):
         # Initialize NVML for GPU monitoring
-        self.nvml_initialized = self._initialize_nvml()
+        self.nvml_initialized = SystemMonitor._initialize_nvml()
 
-    def _initialize_nvml(self):
+    @classmethod
+    def _initialize_nvml(cls):
         try:
             nvmlInit()
             return True
         except Exception as e:
             logger.error(f"Error initializing NVML: {e}")
             return False
+
+    @classmethod
+    def get_ram_usage(cls):
+        return Process().memory_info().rss / (1024 * 1024)
 
     def get_gpu_memory_usage(self):
         if not self.nvml_initialized:
@@ -35,6 +40,3 @@ class SystemMonitor:
         gpu_memory = self.get_gpu_memory_usage()
         if gpu_memory is not None:
             logger.info(f"GPU memory occupied: {gpu_memory} MB.")
-
-    def get_ram_usage(self):
-        return Process().memory_info().rss / (1024 * 1024)
