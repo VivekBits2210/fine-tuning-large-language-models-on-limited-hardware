@@ -1,16 +1,15 @@
 from typing import List
 import sys
 
+LOCAL_PATH = lambda net_id: f"/home/{net_id}/.local/lib/python3.8/site-packages"
+
 
 class PackagePathManager:
     INTEL_PATH = "/share/apps/python/3.8.6/intel/lib/python3.8/site-packages"
 
     def __init__(self, net_id: str):
         self.net_id = net_id
-        self.local_path = self._local_path()
-
-    def _local_path(self) -> str:
-        return f"/home/{self.net_id}/.local/lib/python3.8/site-packages"
+        self.local_path = LOCAL_PATH(self.net_id)
 
     def fetch_package_paths(self) -> List[str]:
         return [self.local_path, self.INTEL_PATH]
