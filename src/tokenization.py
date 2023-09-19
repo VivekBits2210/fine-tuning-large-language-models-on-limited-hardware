@@ -2,7 +2,7 @@ from transformers import AutoTokenizer
 from transformers import DataCollatorForLanguageModeling
 
 
-class TokenizerFactory:
+class Tokenizer:
     def __init__(self, user_config) -> None:
         self.user_config = user_config
         self.tokenizer = None
@@ -24,3 +24,12 @@ class TokenizerFactory:
 
         self.data_collator = DataCollatorForLanguageModeling(tokenizer=self.tokenizer, mlm=False)
         return self.data_collator
+
+    def batched_tokenization(self, data, data_prep_config):
+        return self.tokenizer(
+            data["text"],
+            padding=data_prep_config.padding_strategy,
+            truncation=True,
+            max_length=data_prep_config.max_tokens,
+            return_attention_mask=True
+        )
