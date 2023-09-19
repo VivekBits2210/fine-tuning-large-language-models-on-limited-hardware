@@ -10,20 +10,16 @@ class Tokenizer:
 
     def load_from_path(self, load_path: str) -> None:
         self.tokenizer = AutoTokenizer.from_pretrained(load_path)
-        return self.tokenizer
+        self.__set_data_collator()
 
-    def create(self, model_name: str):
+    def load_for_model(self, model_name: str) -> None:
         self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=self.user_config.cache_path)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = 'left'
-        return self.tokenizer
+        self.__set_data_collator()
 
-    def get_data_collator(self):
-        if self.data_collator:
-            return self.data_collator
-
+    def __set_data_collator(self) -> None:
         self.data_collator = DataCollatorForLanguageModeling(tokenizer=self.tokenizer, mlm=False)
-        return self.data_collator
 
     def run(self, data, data_prep_config):
         return self.tokenizer(
