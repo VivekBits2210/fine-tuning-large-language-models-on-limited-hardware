@@ -1,4 +1,4 @@
 class SystemConfiguration:
-    def __init__(self):
-        self.device = None
-        self.num_workers = None
+    def __init__(self, **kwargs):
+        self.num_workers = kwargs.get("num_workers")
+        self.device = kwargs.get("device", "cuda")

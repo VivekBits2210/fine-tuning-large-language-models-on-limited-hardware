@@ -1,6 +1,7 @@
 class TokenizerConfiguration:
-    def __init__(self):
-        self.truncation = None
-        self.max_tokens = None
-        self.return_attention_mask = None
-        self.padding_strategy = None
+    def __init__(self, **kwargs):
+        self.max_tokens = kwargs.get("max_tokens")
+        self.tokenizer_name = str(self.max_tokens)
+        self.padding_strategy = kwargs.get("padding_strategy", "max_length")
+        self.truncation = kwargs.get("truncation", True)
+        self.return_attention_mask = kwargs.get("return_attention_mask", True)

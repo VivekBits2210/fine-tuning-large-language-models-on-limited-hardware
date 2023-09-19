@@ -1,7 +1,9 @@
 from typing import Optional
 import logging
+
+FORMAT = '%(asctime)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
 logger = logging.getLogger()
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s')
+formatter = logging.Formatter(FORMAT)
 
 
 class LogConfig:
