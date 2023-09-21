@@ -1,6 +1,6 @@
 import os
 import logging 
-logger = logging.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 class UserConfiguration:
     def __init__(self, **kwargs):
@@ -11,7 +11,8 @@ class UserConfiguration:
         if os.name == 'posix':  # UNIX-like systems
             base_dir = "/scratch"
         else:  # Windows (and potentially other OSs)
-            base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Default to D:\\ if USERPROFILE is not set
+            base_dir = "E:\\"
+            # base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Default to D:\\ if USERPROFILE is not set
         logger.info(f"The base directory is set to {base_dir}.")
 
         default_root_path = os.path.join(base_dir, self.net_id, "fine_tuning", self.env)

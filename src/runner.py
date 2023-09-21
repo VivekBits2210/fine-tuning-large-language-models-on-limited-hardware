@@ -65,14 +65,14 @@ if __name__ == "__main__":
     data_manager.dataset_name = DATASET_NAME
 
     # Tokenize dataset from scratch (skipped)
-    # data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
-    #                                                 jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst",
-    #                                                 save_to_disk=False)
-    # data_manager.create_tokenized_dataset(save_to_disk=False)
-    # training_dataset, validation_dataset = data_manager.fetch_train_validation_split(save_to_disk=False)
+    data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
+                                                    jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst",
+                                                    save_to_disk=False)
+    data_manager.create_tokenized_dataset(save_to_disk=False)
+    training_dataset, validation_dataset = data_manager.fetch_train_validation_split(save_to_disk=False)
 
     # Load from disk
-    training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+    # training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
