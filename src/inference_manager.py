@@ -20,7 +20,7 @@ class InferenceManager:
             num_return_sequence=self.text_gen_config.num_return_sequence
         )
 
-    def infer(self, model, tokenizer, prompt: str, device: str):
+    def infer(self, model, tokenizer, device: str, prompt: str = "This "):
         model.config.use_cache = True
         model.eval()
 
