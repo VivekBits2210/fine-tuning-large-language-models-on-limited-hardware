@@ -17,6 +17,7 @@ NET_ID = "vgn2004"
 ENV = "pre_prod"
 NUM_WORKERS = 8
 MAX_TOKENS = 512
+MIN_GENERATION = 128
 MODEL_NAME = "facebook/opt-125m"
 DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
 BATCH_SIZE = 64
@@ -88,10 +89,10 @@ if __name__ == "__main__":
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MAX_TOKENS)
+    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION)
 
     inference_manager = InferenceManager(text_gen_config)
 
     # TODO: The below process should involve tokenization and decode by tokenization_manager, rest by model_manager
     generated_text = inference_manager.infer(model_manager.model, tokenization_manager.tokenizer, system_config.device)
-    logging.info(f"Text:\n{generated_text}")
+    logging.info(f"Initial Generation:\n{generated_text}")
