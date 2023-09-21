@@ -48,6 +48,7 @@ class ModelManager:
             num_return_sequences=text_gen_config.num_return_sequences
         )
 
+    @measure_time_taken
     def infer(self, prompt, text_gen_config):
         prompt.to(self.device)
 
@@ -62,6 +63,7 @@ class ModelManager:
 
         return output_sequence
 
+    @measure_time_taken
     def validate(self, validation_dataloader):
         self.model.eval()
         total_eval_loss = 0.0
