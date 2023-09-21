@@ -49,7 +49,7 @@ class ModelManager:
         )
 
     def infer(self, prompt, text_gen_config):
-        prompt.to_device(self.device)
+        prompt.to(self.device)
 
         self.model.config.use_cache = True
         self.model.eval()
