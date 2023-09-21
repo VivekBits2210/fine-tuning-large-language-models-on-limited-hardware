@@ -4,6 +4,7 @@ from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
 from tokenizer import Tokenizer
+from profiler_utils import measure_time_taken
 from config.user_configuration import UserConfiguration
 from config.system_configuration import SystemConfiguration
 
@@ -25,6 +26,7 @@ class DataManager:
         self.dataset = None
         self.tokenized_dataset = None
 
+    @measure_time_taken
     def create_dataset_from_jsonl_zst_file(self, name: str, jsonl_zst_file_path: str, save_to_disk=True) -> None:
         self.dataset_name = name
         self.dataset = load_dataset("json",
@@ -35,6 +37,7 @@ class DataManager:
         if save_to_disk:
             self.dataset.save_to_disk(self.user_config.data_path)
 
+    @measure_time_taken
     def create_tokenized_dataset(self, save_to_disk: bool = True) -> None:
         self.tokenized_dataset = self.dataset.map(
             self.tokenizer.run,
@@ -50,6 +53,7 @@ class DataManager:
                 )
             )
 
+    @measure_time_taken
     def fetch_train_validation_split(self, split_ratio: float = 0.9, save_to_disk=True):
         if not self.tokenized_dataset:
             raise ValueError("You need to tokenize the dataset first!")
@@ -76,6 +80,7 @@ class DataManager:
 
         return datasets['train'], datasets['valid']
 
+    @measure_time_taken
     def fetch_train_validation_split_from_disk(self):
         train_path = self.user_config.train_dataset_path_generator(
             self.dataset_name,
@@ -98,6 +103,7 @@ class DataManager:
             logger.warning(f"The validation dataset path does not exist!")
         return training_dataset, validation_dataset
 
+    @measure_time_taken
     def fetch_dataloaders(self, training_dataset, batch_size, validation_dataset=None):
         training_dataloader = DataLoader(training_dataset,
                                          sampler=RandomSampler(training_dataset),

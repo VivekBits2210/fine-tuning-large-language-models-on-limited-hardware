@@ -1,6 +1,7 @@
 from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
 
+from profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
 
 
@@ -10,11 +11,13 @@ class ModelManager:
         self.model = None
         self.model_name: Optional[str] = None
 
+    @measure_time_taken
     def load_from_path(self, load_path: str) -> None:
         self.model = AutoModelForCausalLM.from_pretrained(load_path)
         self.model.to(self.device)
         self.__augment_model()
 
+    @measure_time_taken
     def load(self, model_name: str) -> None:
         self.model_name = model_name
 
@@ -24,6 +27,8 @@ class ModelManager:
         self.__augment_model()
 
     def __augment_model(self):
+        self.model.gradient_checkpointing_enable()
+        self.model.enable_input_require_grads()
         self.model.config.use_cache = False
 
 
