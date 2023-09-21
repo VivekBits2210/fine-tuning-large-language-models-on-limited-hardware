@@ -8,7 +8,7 @@ class TextGenConfiguration:
         self.max_tokens_to_generate = kwargs.get("max_tokens_to_generate", 2*self.min_tokens_to_generate)
         self.top_p = kwargs.get("top_p", 0.95)
         self.top_k = kwargs.get("top_k", 50)
-        self.num_return_sequence = kwargs.get("num_return_sequence", 1)
+        self.num_return_sequences = kwargs.get("num_return_sequences", 1)
         self.do_sample = kwargs.get("do_sample", True)
         self.should_remove_new_lines = kwargs.get("should_remove_new_lines", True)
         self.should_remove_tabs = kwargs.get("should_remove_tabs", True)

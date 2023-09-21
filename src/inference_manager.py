@@ -17,7 +17,7 @@ class InferenceManager:
             min_length=self.text_gen_config.min_tokens_to_generate,
             max_length=self.text_gen_config.max_tokens_to_generate,
             top_p=self.text_gen_config.top_p,
-            num_return_sequence=self.text_gen_config.num_return_sequence
+            num_return_sequences=self.text_gen_config.num_return_sequences
         )
 
     def infer(self, model, tokenizer, device: str, prompt: str = "This "):
