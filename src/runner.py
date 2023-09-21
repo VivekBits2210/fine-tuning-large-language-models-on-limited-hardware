@@ -94,5 +94,8 @@ if __name__ == "__main__":
     inference_manager = InferenceManager(text_gen_config)
 
     # TODO: The below process should involve tokenization and decode by tokenization_manager, rest by model_manager
-    generated_text = inference_manager.infer(model_manager.model, tokenization_manager.tokenizer, system_config.device)
-    logging.info(f"Initial Generation:\n{generated_text}")
+    # generated_text = inference_manager.infer(model_manager.model, tokenization_manager.tokenizer, system_config.device)
+    prompt = tokenization_manager.encode("This")
+    sequence = model_manager.infer(prompt, text_gen_config)
+    text = tokenization_manager.decode(sequence, text_gen_config)
+    logging.info(f"Text:\n{text}")

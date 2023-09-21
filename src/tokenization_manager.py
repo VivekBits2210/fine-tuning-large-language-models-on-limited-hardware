@@ -33,4 +33,17 @@ class TokenizationManager:
             return_attention_mask=self.tokenization_config.return_attention_mask
         )
 
-    # TODO: Encode and decode should be handled here, not by inference_manager
+    def encode(self, prompt: str = "This"):
+        sequence = self.tokenizer(self.tokenizer.eos_token + prompt, return_tensors="pt")
+        return sequence
+
+    def decode(self, sequence, text_gen_config):
+        generated_text = self.tokenizer.decode(sequence[0],
+                                               skip_special_tokens=text_gen_config.skip_special_tokens)
+
+        if text_gen_config.should_remove_new_lines:
+            generated_text = generated_text.replace('\n', '')
+        if text_gen_config.should_remove_tabs:
+            generated_text = generated_text.replace('\t', ' ')
+
+        return generated_text
