@@ -2,27 +2,27 @@ import os
 import logging
 from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from transformers import DataCollatorForLanguageModeling
 
-from tokenizer import Tokenizer
 from profiler_utils import measure_time_taken
-from config.user_configuration import UserConfiguration
-from config.system_configuration import SystemConfiguration
+from config import UserConfiguration, TokenizerConfiguration, SystemConfiguration
 
 logger = logging.getLogger(__name__)
 
 
 class DataManager:
     def __init__(self,
-                 tokenizer: Tokenizer,
                  user_config: UserConfiguration,
                  system_config: SystemConfiguration,
-                 dataset_name = None
+                 tokenizer_config: TokenizerConfiguration,
+                 dataset_name=None
                  ) -> None:
-        self.tokenizer = tokenizer
         self.user_config = user_config
         self.system_config = system_config
+        self.tokenizer_config = tokenizer_config
         self.dataset_name = dataset_name
 
+        self.data_collator = None
         self.dataset = None
         self.tokenized_dataset = None
 
@@ -38,18 +38,20 @@ class DataManager:
             self.dataset.save_to_disk(self.user_config.data_path)
 
     @measure_time_taken
-    def create_tokenized_dataset(self, save_to_disk: bool = True) -> None:
+    def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True) -> None:
         self.tokenized_dataset = self.dataset.map(
-            self.tokenizer.run,
+            tokenizer,
             batched=True,
             num_proc=self.system_config.num_workers,
             remove_columns=["text", "meta"],
         )
         if save_to_disk:
+            if not self.dataset_name:
+                raise Exception("You need to set dataset_name in order to save to disk!")
             self.tokenized_dataset.save_to_disk(
                 self.user_config.tokenized_dataset_path_generator(
                     self.dataset_name,
-                    self.tokenizer.tokenization_config.tokenizer_name
+
                 )
             )
 
@@ -65,30 +67,38 @@ class DataManager:
         })
 
         if save_to_disk:
+            if not self.dataset_name:
+                raise Exception("You need to set dataset_name in order to save to disk!")
             datasets['train'].save_to_disk(
                 self.user_config.train_dataset_path_generator(
                     self.dataset_name,
-                    self.tokenizer.tokenization_config.tokenizer_name
+                    self.tokenizer_config.tokenizer_name
                 )
             )
             datasets['valid'].save_to_disk(
                 self.user_config.validation_dataset_path_generator(
                     self.dataset_name,
-                    self.tokenizer.tokenization_config.tokenizer_name
+                    self.tokenizer_config.tokenizer_name
                 )
             )
 
         return datasets['train'], datasets['valid']
 
+    def set_data_collator(self, tokenizer) -> None:
+        self.data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+
     @measure_time_taken
     def fetch_train_validation_split_from_disk(self):
+        if not self.dataset_name:
+            raise Exception("You need to set dataset_name in order to fetch from disk!")
+
         train_path = self.user_config.train_dataset_path_generator(
             self.dataset_name,
-            self.tokenizer.tokenization_config.tokenizer_name
+            self.tokenizer_config.tokenizer_name
         )
         validation_path = self.user_config.validation_dataset_path_generator(
             self.dataset_name,
-            self.tokenizer.tokenization_config.tokenizer_name
+            self.tokenizer_config.tokenizer_name
         )
 
         if not os.path.exists(train_path):
@@ -105,11 +115,13 @@ class DataManager:
 
     @measure_time_taken
     def fetch_dataloaders(self, training_dataset, batch_size, validation_dataset=None):
+        if not self.data_collator:
+            raise Exception("The data collator needs to be set before data loaders can be created!")
         training_dataloader = DataLoader(training_dataset,
                                          sampler=RandomSampler(training_dataset),
                                          batch_size=batch_size,
                                          num_workers=self.system_config.num_workers,
-                                         collate_fn=self.tokenizer.data_collator,
+                                         collate_fn=self.data_collator,
                                          pin_memory=True)
 
         validation_dataloader = None
@@ -118,7 +130,7 @@ class DataManager:
                                                sampler=SequentialSampler(validation_dataset),
                                                batch_size=batch_size,
                                                num_workers=self.system_config.num_workers,
-                                               collate_fn=self.tokenizer.data_collator,
+                                               collate_fn=self.data_collator,
                                                pin_memory=True)
 
         return training_dataloader, validation_dataloader
