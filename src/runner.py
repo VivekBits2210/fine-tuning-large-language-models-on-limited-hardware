@@ -1,13 +1,14 @@
 import logging
 
-from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, SystemConfiguration
+from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, TextGenConfiguration, SystemConfiguration
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
 from model_manager import ModelManager
+from inference_manager import InferenceManager
 from system_monitor import SystemMonitor
 
-from tokenizer import Tokenizer
+from tokenization_manager import TokenizationManager
 from data_manager import DataManager
 
 
@@ -57,22 +58,23 @@ if __name__ == "__main__":
     os_env_manager.update_from_dict(OS_ENV_DICT)
 
     # Tokenization
-    tokenizer = Tokenizer(user_config, tokenizer_config)
-    tokenizer.load_for_model(MODEL_NAME)
+    tokenization_manager = TokenizationManager(user_config, tokenizer_config)
+    tokenization_manager.load_for_model(MODEL_NAME)
 
     # Datasets
-    data_manager = DataManager(tokenizer, user_config, system_config)
+    data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = DATASET_NAME
+    data_manager.set_data_collator(tokenization_manager.tokenizer)
 
     # Tokenize dataset from scratch (skipped)
-    data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
-                                                    jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst",
-                                                    save_to_disk=False)
-    data_manager.create_tokenized_dataset(save_to_disk=False)
-    training_dataset, validation_dataset = data_manager.fetch_train_validation_split(save_to_disk=False)
+    # data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
+    #                                                 jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst",
+    #                                                 save_to_disk=False)
+    # data_manager.create_tokenized_dataset(save_to_disk=False)
+    # training_dataset, validation_dataset = data_manager.fetch_train_validation_split(save_to_disk=False)
 
     # Load from disk
-    # training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+    training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
@@ -85,3 +87,12 @@ if __name__ == "__main__":
     model_manager = ModelManager(system_config)
     model_manager.load(MODEL_NAME)
     logger.info(model_manager.model)
+
+    # Text Generation
+    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MAX_TOKENS)
+
+    inference_manager = InferenceManager(text_gen_config)
+
+    # TODO: The below process should involve tokenization and decode by tokenization_manager, rest by model_manager
+    generated_text = inference_manager.infer(model_manager.model, tokenization_manager.tokenizer, system_config.device)
+    logging.info(f"Text:\n{generated_text}")
