@@ -12,7 +12,7 @@ class UserConfiguration:
             base_dir = "/scratch"
         else:  # Windows (and potentially other OSs)
             base_dir = "E:\\"
-            # base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Default to D:\\ if USERPROFILE is not set
+            # base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Ideally, default to D:\\ if USERPROFILE is not set
         logger.info(f"The base directory is set to {base_dir}.")
 
         default_root_path = os.path.join(base_dir, self.net_id, "fine_tuning", self.env)
