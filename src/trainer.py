@@ -45,7 +45,7 @@ class Trainer:
         self.model_path = None
         self._setup_logging_and_saving()
 
-        self.optimizer = AdamW(params=self.model_manager.model.parameters())
+        self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=1e-5)
         self.running_loss = 0.0
 
     @measure_time_taken
@@ -71,8 +71,7 @@ class Trainer:
 
     @measure_time_taken
     def handle_batch(self, epoch, index, batch):
-        self.optimizer.zero_grad(set_to_none=True)
-
+        self.model_manager.model.train()
         # Sample an output from the model, at each sampling interval
         if index % self.train_config.sampling_interval == 0:
             prompt = self.tokenization_manager.encode("This")
@@ -102,7 +101,7 @@ class Trainer:
     @measure_time_taken
     def validate_model(self, epoch, index):
         logger.info("Running Validation...")
-        avg_eval_loss, perplexity = self.model_manager.model.validate(self.validation_dataloader)
+        avg_eval_loss, perplexity = self.model_manager.validate(self.validation_dataloader)
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, Validation Loss: {avg_eval_loss:.4f}, "
             f"Perplexity: {perplexity:.2f}")
@@ -111,16 +110,16 @@ class Trainer:
 
     @measure_time_taken
     def forward_backward_pass(self, batch):
+        self.optimizer.zero_grad(set_to_none=True)
         batch = {k: v.pin_memory().to(self.model_manager.device, non_blocking=True) for k, v in batch.items()}
         outputs = self.model_manager.model(**batch)
         loss = outputs.loss
         self.running_loss += loss.item()
-        self.optimizer.step()
         loss.backward()
+        self.optimizer.step()
 
     def run(self):
-        self.model_manager.model.train()
-
+        self.running_loss = 0.0
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
