@@ -1,7 +1,14 @@
 import logging
 
-from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, \
-    TextGenConfiguration, SystemConfiguration, TrainerConfiguration
+from config import (
+    UserConfiguration,
+    LogConfiguration,
+    TorchConfiguration,
+    TokenizerConfiguration,
+    TextGenConfiguration,
+    SystemConfiguration,
+    TrainerConfiguration,
+)
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
@@ -27,7 +34,7 @@ BATCH_SIZE = 64
 OS_ENV_DICT = {
     "CUDA_VISIBLE_DEVICES": 0,
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-    "TORCHDYNAMO_DISABLE": 1
+    "TORCHDYNAMO_DISABLE": 1,
 }
 
 if __name__ == "__main__":
@@ -75,13 +82,16 @@ if __name__ == "__main__":
     #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Load from disk
-    training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+    (
+        training_dataset,
+        validation_dataset,
+    ) = data_manager.fetch_train_validation_split_from_disk()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
     )
 
     # Model
@@ -90,7 +100,9 @@ if __name__ == "__main__":
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION)
+    text_gen_config = TextGenConfiguration(
+        tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION
+    )
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
@@ -98,16 +110,17 @@ if __name__ == "__main__":
 
     # Training
     train_config = TrainerConfiguration()
-    trainer = Trainer(model_name=MODEL_NAME,
-                      user_config=user_config,
-                      system_config=system_config,
-                      tokenizer_config=tokenizer_config,
-                      text_gen_config=text_gen_config,
-                      train_config=train_config,
-                      data_manager=data_manager,
-                      model_manager=model_manager,
-                      tokenization_manager=tokenization_manager,
-                      training_dataloader=training_dataloader,
-                      validation_dataloader=validation_dataloader
-                      )
+    trainer = Trainer(
+        model_name=MODEL_NAME,
+        user_config=user_config,
+        system_config=system_config,
+        tokenizer_config=tokenizer_config,
+        text_gen_config=text_gen_config,
+        train_config=train_config,
+        data_manager=data_manager,
+        model_manager=model_manager,
+        tokenization_manager=tokenization_manager,
+        training_dataloader=training_dataloader,
+        validation_dataloader=validation_dataloader,
+    )
     trainer.run()

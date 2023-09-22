@@ -6,6 +6,7 @@ from transformers import AutoModelForCausalLM, AutoConfig
 
 from profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +27,9 @@ class ModelManager:
         self.model_name = model_name
 
         configuration = AutoConfig.from_pretrained(self.model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, config=configuration)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_name, config=configuration
+        )
         self.model.to(self.device)
         self.__augment_model()
 
@@ -45,7 +48,7 @@ class ModelManager:
             min_length=text_gen_config.min_tokens_to_generate,
             max_length=text_gen_config.max_tokens_to_generate,
             top_p=text_gen_config.top_p,
-            num_return_sequences=text_gen_config.num_return_sequences
+            num_return_sequences=text_gen_config.num_return_sequences,
         )
 
     @measure_time_taken
@@ -69,19 +72,20 @@ class ModelManager:
         total_eval_loss = 0.0
         avg_eval_loss = 0.0
         for index, batch in tqdm(enumerate(validation_dataloader, 1)):
-            batch = {k: v.pin_memory().to(self.device, non_blocking=True) for k, v in batch.items()}
+            batch = {
+                k: v.pin_memory().to(self.device, non_blocking=True)
+                for k, v in batch.items()
+            }
             with torch.no_grad():
                 outputs = self.model(**batch)
                 loss = outputs.loss
             total_eval_loss += loss.item()
             avg_eval_loss = total_eval_loss / index
-            logger.info(f"Validation: Batch {index}/{len(validation_dataloader)}, Loss: {avg_eval_loss:.4f}")
+            logger.info(
+                f"Validation: Batch {index}/{len(validation_dataloader)}, Loss: {avg_eval_loss:.4f}"
+            )
 
         perplexity = torch.exp(torch.as_tensor(avg_eval_loss)).item()
         self.model.train()
 
         return avg_eval_loss, perplexity
-
-
-
-

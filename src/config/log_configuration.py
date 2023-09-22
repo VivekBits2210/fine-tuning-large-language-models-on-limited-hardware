@@ -1,9 +1,9 @@
 from typing import Optional
 import logging
 
-FORMAT = '%(levelname)s: At %(asctime)s, from %(filename)s:%(funcName)s:%(lineno)d => %(message)s'
+FORMAT = "%(levelname)s: At %(asctime)s, from %(filename)s:%(funcName)s:%(lineno)d => %(message)s"
 logger = logging.getLogger()
-formatter = logging.Formatter(FORMAT, datefmt='%I:%M %p %Ss')
+formatter = logging.Formatter(FORMAT, datefmt="%I:%M %p %Ss")
 
 
 class LogConfiguration:

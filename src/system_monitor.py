@@ -2,6 +2,7 @@ from psutil import Process
 from pynvml import nvmlInit, nvmlDeviceGetHandleByIndex, nvmlDeviceGetMemoryInfo
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +31,7 @@ class SystemMonitor:
         try:
             handle = nvmlDeviceGetHandleByIndex(0)
             info = nvmlDeviceGetMemoryInfo(handle)
-            return info.used // 1024 ** 2
+            return info.used // 1024**2
         except Exception as e:
             logger.error(f"Error retrieving GPU memory info: {e}")
             return None
