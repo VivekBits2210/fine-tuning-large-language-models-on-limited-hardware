@@ -1,3 +1,4 @@
+import argparse
 import logging
 
 from config import (
@@ -21,14 +22,28 @@ from data_manager import DataManager
 # TODO: These should be picked up from command line
 from trainer import Trainer
 
-NET_ID = "vgn2004"
-ENV = "pre_prod"
-NUM_WORKERS = 8
-MAX_TOKENS = 512
-MIN_GENERATION = 128
-MODEL_NAME = "facebook/opt-125m"
-DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
-BATCH_SIZE = 64
+# Argument parser setup
+parser = argparse.ArgumentParser(description="Runner script for training")
+parser.add_argument("--net-id", type=str, default="vgn2004", help="Network ID")
+parser.add_argument("--env", type=str, default="pre_prod", help="Environment")
+parser.add_argument("--num-workers", type=int, default=8, help="Number of workers")
+parser.add_argument("--max-tokens", type=int, default=512, help="Max tokens for tokenizer")
+parser.add_argument("--min-generation", type=int, default=128, help="Min tokens to generate")
+parser.add_argument("--model-name", type=str, default="facebook/opt-125m", help="Name of the model")
+parser.add_argument("--dataset-name", type=str, default="NIH_ExPORTER_awarded_grant_text", help="Name of the dataset")
+parser.add_argument("--batch-size", type=int, default=64, help="Batch size for training")
+
+args = parser.parse_args()
+
+# Use the arguments
+NET_ID = args.net_id
+ENV = args.env
+NUM_WORKERS = args.num_workers
+MAX_TOKENS = args.max_tokens
+MIN_GENERATION = args.min_generation
+MODEL_NAME = args.model_name
+DATASET_NAME = args.dataset_name
+BATCH_SIZE = args.batch_size
 
 # Constants
 OS_ENV_DICT = {
