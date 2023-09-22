@@ -95,9 +95,9 @@ class Trainer:
         self.model_manager.model.save_pretrained(checkpointing_path)
         self.tokenization_manager.tokenizer.save_pretrained(checkpointing_path)
 
-    def validate_model(self, epoch, index, validation_dataloader):
+    def validate_model(self, epoch, index):
         logging.info("Running Validation...")
-        avg_eval_loss, perplexity = self.model_manager.model.validate(validation_dataloader)
+        avg_eval_loss, perplexity = self.model_manager.model.validate(self.validation_dataloader)
         logging.info(
             f"Batch {index}/{len(self.training_dataloader)}, Validation Loss: {avg_eval_loss:.4f}, "
             f"Perplexity: {perplexity:.2f}")
