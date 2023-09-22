@@ -33,10 +33,12 @@ class TokenizationManager:
             return_attention_mask=self.tokenization_config.return_attention_mask
         )
 
+    @measure_time_taken
     def encode(self, prompt: str = "This"):
         sequence = self.tokenizer(self.tokenizer.eos_token + prompt, return_tensors="pt")
         return sequence
 
+    @measure_time_taken
     def decode(self, sequence, text_gen_config):
         generated_text = self.tokenizer.decode(sequence[0],
                                                skip_special_tokens=text_gen_config.skip_special_tokens)

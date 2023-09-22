@@ -1,18 +1,19 @@
 import logging
 
-from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, TextGenConfiguration, SystemConfiguration
+from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, \
+    TextGenConfiguration, SystemConfiguration, TrainerConfiguration
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
 from model_manager import ModelManager
-from inference_manager import InferenceManager
 from system_monitor import SystemMonitor
 
 from tokenization_manager import TokenizationManager
 from data_manager import DataManager
 
-
 # TODO: These should be picked up from command line
+from trainer import Trainer
+
 NET_ID = "vgn2004"
 ENV = "pre_prod"
 NUM_WORKERS = 8
@@ -68,10 +69,10 @@ if __name__ == "__main__":
     data_manager.set_data_collator(tokenization_manager.tokenizer)
 
     # Tokenize dataset from scratch (skipped)
-#     data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
-#                                                     jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst")
-#     data_manager.create_tokenized_dataset()
-#     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
+    #     data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
+    #                                                     jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+    #     data_manager.create_tokenized_dataset()
+    #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Load from disk
     training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
@@ -90,12 +91,23 @@ if __name__ == "__main__":
 
     # Text Generation
     text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION)
-
-    inference_manager = InferenceManager(text_gen_config)
-
-    # TODO: The below process should involve tokenization and decode by tokenization_manager, rest by model_manager
-    # generated_text = inference_manager.infer(model_manager.model, tokenization_manager.tokenizer, system_config.device)
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
     logging.info(f"Generated Text Before Fine-Tuning:\n{text}")
+
+    # Training
+    train_config = TrainerConfiguration()
+    trainer = Trainer(model_name=MODEL_NAME,
+                      user_config=user_config,
+                      system_config=system_config,
+                      tokenizer_config=tokenizer_config,
+                      text_gen_config=text_gen_config,
+                      train_config=train_config,
+                      data_manager=data_manager,
+                      model_manager=model_manager,
+                      tokenization_manager=tokenization_manager,
+                      training_dataloader=training_dataloader,
+                      validation_dataloader=validation_dataloader
+                      )
+    trainer.run()
