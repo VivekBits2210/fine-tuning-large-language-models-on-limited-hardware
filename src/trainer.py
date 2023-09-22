@@ -7,6 +7,7 @@ from config import SystemConfiguration, UserConfiguration, TokenizerConfiguratio
     TextGenConfiguration
 from data_manager import DataManager
 from model_manager import ModelManager
+from profiler_utils import measure_time_taken
 from tokenization_manager import TokenizationManager
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ class Trainer:
         self.optimizer = AdamW(params=self.model_manager.model.parameters())
         self.running_loss = 0.0
 
+    @measure_time_taken
     def _setup_logging_and_saving(self):
         model_name = self.model_name
         dataset_name = self.data_manager.dataset_name
@@ -67,6 +69,7 @@ class Trainer:
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
 
+    @measure_time_taken
     def handle_batch(self, epoch, index, batch):
         self.optimizer.zero_grad(set_to_none=True)
 
@@ -89,21 +92,24 @@ class Trainer:
 
         self.forward_backward_pass(batch)
 
+    @measure_time_taken
     def save_checkpoint(self, epoch, index):
-        logging.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
+        logger.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
         self.model_manager.model.save_pretrained(checkpointing_path)
         self.tokenization_manager.tokenizer.save_pretrained(checkpointing_path)
 
+    @measure_time_taken
     def validate_model(self, epoch, index):
-        logging.info("Running Validation...")
+        logger.info("Running Validation...")
         avg_eval_loss, perplexity = self.model_manager.model.validate(self.validation_dataloader)
-        logging.info(
+        logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, Validation Loss: {avg_eval_loss:.4f}, "
             f"Perplexity: {perplexity:.2f}")
         with open(f"{self.log_path}/validation.log", "a") as f:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
 
+    @measure_time_taken
     def forward_backward_pass(self, batch):
         batch = {k: v.pin_memory().to(self.model_manager.device, non_blocking=True) for k, v in batch.items()}
         outputs = self.model_manager.model(**batch)
@@ -116,7 +122,7 @@ class Trainer:
         self.model_manager.model.train()
 
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
-            logging.info(f"Epoch: {epoch}/{self.train_config.epochs}")
+            logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
             for index, batch in tqdm(enumerate(self.training_dataloader, 1), total=len(self.training_dataloader)):
                 self.handle_batch(epoch, index, batch)
