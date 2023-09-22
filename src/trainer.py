@@ -17,7 +17,7 @@ class Trainer:
                  model_name,
                  user_config: UserConfiguration,
                  system_config: SystemConfiguration,
-                 tokenization_config: TokenizerConfiguration,
+                 tokenizer_config: TokenizerConfiguration,
                  text_gen_config: TextGenConfiguration,
                  train_config: TrainerConfiguration,
                  data_manager: DataManager,
@@ -28,7 +28,7 @@ class Trainer:
         self.model_name = model_name
         self.user_config = user_config
         self.system_config = system_config
-        self.tokenization_config = tokenization_config
+        self.tokenizer_config = tokenizer_config
         self.text_gen_config = text_gen_config
         self.train_config = train_config
 
@@ -50,7 +50,7 @@ class Trainer:
     def _setup_logging_and_saving(self):
         model_name = self.model_name
         dataset_name = self.data_manager.dataset_name
-        tokenizer_name = self.tokenization_config.tokenizer_name
+        tokenizer_name = self.tokenizer_config.tokenizer_name
 
         self.log_path = self.user_config.logs_path_generator(model_name, dataset_name, tokenizer_name)
 
