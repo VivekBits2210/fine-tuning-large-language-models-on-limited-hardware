@@ -98,4 +98,4 @@ if __name__ == "__main__":
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
-    logging.info(f"Text:\n{text}")
+    logging.info(f"Generated Text Before Fine-Tuning:\n{text}")
