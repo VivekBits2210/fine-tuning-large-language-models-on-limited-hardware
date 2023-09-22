@@ -127,6 +127,8 @@ class DataManager:
             raise Exception(
                 "The data collator needs to be set before data loaders can be created!"
             )
+        logger.info(f"Batch size is set to {batch_size}.")
+
         training_dataloader = DataLoader(
             training_dataset,
             sampler=RandomSampler(training_dataset),
