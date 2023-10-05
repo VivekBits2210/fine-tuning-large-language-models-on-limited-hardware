@@ -1,9 +1,17 @@
+import argparse
 import logging
 import gc
 import torch
 
-from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, \
-TextGenConfiguration, SystemConfiguration, TrainerConfiguration
+from config import (
+    UserConfiguration,
+    LogConfiguration,
+    TorchConfiguration,
+    TokenizerConfiguration,
+    TextGenConfiguration,
+    SystemConfiguration,
+    TrainerConfiguration,
+)
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
@@ -16,21 +24,34 @@ from data_manager import DataManager
 # TODO: These should be picked up from command line
 from trainer import Trainer
 
-NET_ID = "vgn2004"
-ENV = "pre_prod"
-NUM_WORKERS = 8
-MAX_TOKENS = 64
-MIN_GENERATION = 64
-MODEL_NAME = "facebook/opt-125m"
-DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
-TOKENIZER_NAME = "speedup"
-BATCH_SIZE = 64
+# Argument parser setup
+parser = argparse.ArgumentParser(description="Runner script for training")
+parser.add_argument("--net-id", type=str, default="vgn2004", help="Net ID")
+parser.add_argument("--env", type=str, default="pre_prod", help="Environment")
+parser.add_argument("--num-workers", type=int, default=8, help="Number of workers")
+parser.add_argument("--max-tokens", type=int, default=64, help="Max tokens for tokenizer")
+parser.add_argument("--min-generation", type=int, default=64, help="Min tokens to generate")
+parser.add_argument("--model-name", type=str, default="facebook/opt-125m", help="Name of the model")
+parser.add_argument("--dataset-name", type=str, default="NIH_ExPORTER_awarded_grant_text", help="Name of the dataset")
+parser.add_argument("--batch-size", type=int, default=64, help="Batch size for training")
+
+args = parser.parse_args()
+
+# Use the arguments
+NET_ID = args.net_id
+ENV = args.env
+NUM_WORKERS = args.num_workers
+MAX_TOKENS = args.max_tokens
+MIN_GENERATION = args.min_generation
+MODEL_NAME = args.model_name
+DATASET_NAME = args.dataset_name
+BATCH_SIZE = args.batch_size
 
 # Constants
 OS_ENV_DICT = {
-"CUDA_VISIBLE_DEVICES": 0,
-"TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-"TORCHDYNAMO_DISABLE": 1
+    "CUDA_VISIBLE_DEVICES": 0,
+    "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
+    "TORCHDYNAMO_DISABLE": 1,
 }
 
 if __name__ == "__main__":
@@ -82,6 +103,7 @@ if __name__ == "__main__":
     #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Load from disk
+
     try:
         training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
     except FileNotFoundError as fe:
@@ -94,7 +116,7 @@ if __name__ == "__main__":
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
     )
 
     # Model
@@ -103,7 +125,9 @@ if __name__ == "__main__":
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION)
+    text_gen_config = TextGenConfiguration(
+        tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION
+    )
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
@@ -111,16 +135,17 @@ if __name__ == "__main__":
 
     # Training
     train_config = TrainerConfiguration()
-    trainer = Trainer(model_name=MODEL_NAME,
-                      user_config=user_config,
-                      system_config=system_config,
-                      tokenizer_config=tokenizer_config,
-                      text_gen_config=text_gen_config,
-                      train_config=train_config,
-                      data_manager=data_manager,
-                      model_manager=model_manager,
-                      tokenization_manager=tokenization_manager,
-                      training_dataloader=training_dataloader,
-                      validation_dataloader=validation_dataloader
-                      )
+    trainer = Trainer(
+        model_name=MODEL_NAME,
+        user_config=user_config,
+        system_config=system_config,
+        tokenizer_config=tokenizer_config,
+        text_gen_config=text_gen_config,
+        train_config=train_config,
+        data_manager=data_manager,
+        model_manager=model_manager,
+        tokenization_manager=tokenization_manager,
+        training_dataloader=training_dataloader,
+        validation_dataloader=validation_dataloader,
+    )
     trainer.run()

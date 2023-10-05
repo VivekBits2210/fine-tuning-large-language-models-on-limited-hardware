@@ -3,8 +3,13 @@ import os
 from tqdm import tqdm
 from transformers import AdamW
 
-from config import SystemConfiguration, UserConfiguration, TokenizerConfiguration, TrainerConfiguration, \
-    TextGenConfiguration
+from config import (
+    SystemConfiguration,
+    UserConfiguration,
+    TokenizerConfiguration,
+    TrainerConfiguration,
+    TextGenConfiguration,
+)
 from data_manager import DataManager
 from model_manager import ModelManager
 from profiler_utils import measure_time_taken
@@ -14,18 +19,20 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer:
-    def __init__(self,
-                 model_name,
-                 user_config: UserConfiguration,
-                 system_config: SystemConfiguration,
-                 tokenizer_config: TokenizerConfiguration,
-                 text_gen_config: TextGenConfiguration,
-                 train_config: TrainerConfiguration,
-                 data_manager: DataManager,
-                 model_manager: ModelManager,
-                 tokenization_manager: TokenizationManager,
-                 training_dataloader,
-                 validation_dataloader):
+    def __init__(
+        self,
+        model_name,
+        user_config: UserConfiguration,
+        system_config: SystemConfiguration,
+        tokenizer_config: TokenizerConfiguration,
+        text_gen_config: TextGenConfiguration,
+        train_config: TrainerConfiguration,
+        data_manager: DataManager,
+        model_manager: ModelManager,
+        tokenization_manager: TokenizationManager,
+        training_dataloader,
+        validation_dataloader,
+    ):
         self.model_name = model_name
         self.user_config = user_config
         self.system_config = system_config
@@ -54,7 +61,9 @@ class Trainer:
         dataset_name = self.data_manager.dataset_name
         tokenizer_name = self.tokenizer_config.tokenizer_name
 
-        self.log_path = self.user_config.logs_path_generator(model_name, dataset_name, tokenizer_name)
+        self.log_path = self.user_config.logs_path_generator(
+            model_name, dataset_name, tokenizer_name
+        )
 
         if not os.path.exists(self.log_path):
             os.makedirs(self.log_path)
@@ -64,7 +73,9 @@ class Trainer:
         with open(f"{self.log_path}/validation.log", "w+") as f:
             f.write("epoch\tbatch\tvalidation_loss\tperplexity\n")
 
-        self.model_path = self.user_config.model_path_generator(model_name, dataset_name, tokenizer_name)
+        self.model_path = self.user_config.model_path_generator(
+            model_name, dataset_name, tokenizer_name
+        )
 
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
@@ -101,17 +112,23 @@ class Trainer:
     @measure_time_taken
     def validate_model(self, epoch, index):
         logger.info("Running Validation...")
-        avg_eval_loss, perplexity = self.model_manager.validate(self.validation_dataloader)
+        avg_eval_loss, perplexity = self.model_manager.validate(
+            self.validation_dataloader
+        )
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, Validation Loss: {avg_eval_loss:.4f}, "
-            f"Perplexity: {perplexity:.2f}")
+            f"Perplexity: {perplexity:.2f}"
+        )
         with open(f"{self.log_path}/validation.log", "a") as f:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
 
     @measure_time_taken
     def forward_backward_pass(self, batch):
         self.optimizer.zero_grad(set_to_none=True)
-        batch = {k: v.pin_memory().to(self.model_manager.device, non_blocking=True) for k, v in batch.items()}
+        batch = {
+            k: v.pin_memory().to(self.model_manager.device, non_blocking=True)
+            for k, v in batch.items()
+        }
         outputs = self.model_manager.model(**batch)
         loss = outputs.loss
         self.running_loss += loss.item()
@@ -123,7 +140,10 @@ class Trainer:
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
-            for index, batch in tqdm(enumerate(self.training_dataloader, 1), total=len(self.training_dataloader)):
+            for index, batch in tqdm(
+                enumerate(self.training_dataloader, 1),
+                total=len(self.training_dataloader),
+            ):
                 self.handle_batch(epoch, index, batch)
 
         self.model_manager.model.save_pretrained(self.model_path)

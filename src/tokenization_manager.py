@@ -6,7 +6,11 @@ from config.tokenizer_configuration import TokenizerConfiguration
 
 
 class TokenizationManager:
-    def __init__(self, user_config: UserConfiguration, tokenization_config: TokenizerConfiguration) -> None:
+    def __init__(
+        self,
+        user_config: UserConfiguration,
+        tokenization_config: TokenizerConfiguration,
+    ) -> None:
         self.user_config = user_config
         self.tokenization_config = tokenization_config
         self.tokenizer = None
@@ -18,11 +22,13 @@ class TokenizationManager:
 
     @measure_time_taken
     def load_for_model(self, model_name: str) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=self.user_config.cache_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name, cache_dir=self.user_config.cache_path
+        )
 
         # TODO: Set these using configurations
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.tokenizer.padding_side = 'left'
+        self.tokenizer.padding_side = "left"
 
     def tokenize(self, data):
         return self.tokenizer(
@@ -30,22 +36,25 @@ class TokenizationManager:
             padding=self.tokenization_config.padding_strategy,
             truncation=self.tokenization_config.truncation,
             max_length=self.tokenization_config.max_tokens,
-            return_attention_mask=self.tokenization_config.return_attention_mask
+            return_attention_mask=self.tokenization_config.return_attention_mask,
         )
 
     @measure_time_taken
     def encode(self, prompt: str = "This"):
-        sequence = self.tokenizer(self.tokenizer.eos_token + prompt, return_tensors="pt")
+        sequence = self.tokenizer(
+            self.tokenizer.eos_token + prompt, return_tensors="pt"
+        )
         return sequence
 
     @measure_time_taken
     def decode(self, sequence, text_gen_config):
-        generated_text = self.tokenizer.decode(sequence[0],
-                                               skip_special_tokens=text_gen_config.skip_special_tokens)
+        generated_text = self.tokenizer.decode(
+            sequence[0], skip_special_tokens=text_gen_config.skip_special_tokens
+        )
 
         if text_gen_config.should_remove_new_lines:
-            generated_text = generated_text.replace('\n', '')
+            generated_text = generated_text.replace("\n", "")
         if text_gen_config.should_remove_tabs:
-            generated_text = generated_text.replace('\t', ' ')
+            generated_text = generated_text.replace("\t", " ")
 
         return generated_text
