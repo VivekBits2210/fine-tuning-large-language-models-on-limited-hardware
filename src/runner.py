@@ -1,7 +1,9 @@
 import logging
+import gc
+import torch
 
 from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, \
-    TextGenConfiguration, SystemConfiguration, TrainerConfiguration
+TextGenConfiguration, SystemConfiguration, TrainerConfiguration
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
@@ -17,20 +19,25 @@ from trainer import Trainer
 NET_ID = "vgn2004"
 ENV = "pre_prod"
 NUM_WORKERS = 8
-MAX_TOKENS = 512
-MIN_GENERATION = 128
+MAX_TOKENS = 64
+MIN_GENERATION = 64
 MODEL_NAME = "facebook/opt-125m"
 DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
+TOKENIZER_NAME = "speedup"
 BATCH_SIZE = 64
 
 # Constants
 OS_ENV_DICT = {
-    "CUDA_VISIBLE_DEVICES": 0,
-    "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-    "TORCHDYNAMO_DISABLE": 1
+"CUDA_VISIBLE_DEVICES": 0,
+"TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
+"TORCHDYNAMO_DISABLE": 1
 }
 
 if __name__ == "__main__":
+    # Clear the GPU
+    torch.cuda.empty_cache()
+    gc.collect()
+
     # Configure the logger, needed for initial utilization checks
     LogConfiguration.setup_logging()
     logger = logging.getLogger(__name__)
@@ -45,7 +52,7 @@ if __name__ == "__main__":
     # Setup folder/file path related configurations
     user_config = UserConfiguration(net_id=NET_ID, env=ENV)
     system_config = SystemConfiguration(num_workers=NUM_WORKERS)
-    tokenizer_config = TokenizerConfiguration(max_tokens=MAX_TOKENS)
+    tokenizer_config = TokenizerConfiguration(max_tokens=MAX_TOKENS, tokenizer_name = TOKENIZER_NAME)
     torch_config = TorchConfiguration()
     torch_config.commit()
 
@@ -75,7 +82,13 @@ if __name__ == "__main__":
     #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Load from disk
-    training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+    try:
+        training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+    except FileNotFoundError as fe:
+        logger.warning(f"{fe.__repr__()}")
+        data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,                                             jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+        data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
+        training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
