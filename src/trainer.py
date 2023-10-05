@@ -1,7 +1,7 @@
 import logging
 import os
 from tqdm import tqdm
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 
 from config import (
     SystemConfiguration,
@@ -52,7 +52,12 @@ class Trainer:
         self.model_path = None
         self._setup_logging_and_saving()
 
-        self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=1e-5)
+        self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr)
+        self.lr_scheduler = get_linear_schedule_with_warmup(
+            optimizer=self.optimizer,
+            num_warmup_steps=self.train_config.num_warmup_steps,
+            num_training_steps=(len(self.training_dataloader) * self.train_config.epochs),
+        )
         self.running_loss = 0.0
 
     @measure_time_taken
@@ -134,6 +139,7 @@ class Trainer:
         self.running_loss += loss.item()
         loss.backward()
         self.optimizer.step()
+        self.lr_scheduler.step()
 
     def run(self):
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
