@@ -119,8 +119,8 @@ class Trainer:
         self.optimizer.step()
 
     def run(self):
-        self.running_loss = 0.0
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
+            self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
             for index, batch in tqdm(enumerate(self.training_dataloader, 1), total=len(self.training_dataloader)):

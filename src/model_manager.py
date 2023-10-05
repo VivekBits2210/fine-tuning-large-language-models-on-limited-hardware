@@ -3,6 +3,7 @@ import torch
 from tqdm import tqdm
 from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
+from peft import get_peft_model
 
 from profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
@@ -22,18 +23,33 @@ class ModelManager:
         self.__augment_model()
 
     @measure_time_taken
-    def load(self, model_name: str) -> None:
+    def load(self, model_name: str, quantization_config = None) -> None:
         self.model_name = model_name
 
         configuration = AutoConfig.from_pretrained(self.model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_name, config=configuration)
-        self.model.to(self.device)
+        
+        if not quantization_config:
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, config=configuration)
+            self.model.to(self.device)
+        else:
+            logger.info(f"Quantizing the model with config as {quantization_config}")
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, 
+                                                              config=configuration, 
+                                                              device_map = 'auto', 
+                                                              quantization_config = quantization_config)
+
         self.__augment_model()
+        
+    @measure_time_taken
+    def lorify(self, lora_config):
+        self.model = get_peft_model(self.model, lora_config)
+        logger.info(f"Using LoRA with configuration: {self.model.peft_config}")
 
     def __augment_model(self):
-        self.model.gradient_checkpointing_enable()
-        self.model.enable_input_require_grads()
+#         self.model.gradient_checkpointing_enable()
+#         self.model.enable_input_require_grads()
         self.model.config.use_cache = False
+        self.model.config.pretraining_tp = 1
 
     def _generate_tokens(self, inputs, text_gen_config):
         return self.model.generate(
@@ -81,7 +97,3 @@ class ModelManager:
         self.model.train()
 
         return avg_eval_loss, perplexity
-
-
-
-

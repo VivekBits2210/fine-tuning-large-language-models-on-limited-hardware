@@ -1,4 +1,5 @@
 import os
+import random
 import logging
 from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -51,19 +52,23 @@ class DataManager:
             self.tokenized_dataset.save_to_disk(
                 self.user_config.tokenized_dataset_path_generator(
                     self.dataset_name,
-
+                    self.tokenizer_config.tokenizer_name
                 )
             )
 
     @measure_time_taken
-    def fetch_train_validation_split(self, split_ratio: float = 0.9, save_to_disk=True):
+    def fetch_train_validation_split(self, split_ratio: float = 0.95, keep_fraction: float = 0.1, save_to_disk=True):
         if not self.tokenized_dataset:
             raise ValueError("You need to tokenize the dataset first!")
 
-        train_size = int(split_ratio * len(self.tokenized_dataset))
+        random_seed = random.randint(0, 2**32 - 1)
+        keep_size = int(keep_fraction * len(self.tokenized_dataset))
+        sampled_dataset = self.tokenized_dataset.shuffle(seed=random_seed).select(range(keep_size))
+        
+        train_size = int(split_ratio * len(sampled_dataset))
         datasets = DatasetDict({
-            'train': Dataset.from_dict(self.tokenized_dataset[:train_size]),
-            'valid': Dataset.from_dict(self.tokenized_dataset[train_size:])
+            'train': Dataset.from_dict(sampled_dataset[:train_size]),
+            'valid': Dataset.from_dict(sampled_dataset[train_size:])
         })
 
         if save_to_disk:
