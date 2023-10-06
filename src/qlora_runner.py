@@ -17,8 +17,17 @@ from data_manager import DataManager
 # TODO: These should be picked up from command line
 from trainer import Trainer
 
+from transformers import BitsAndBytesConfig
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype="float16",
+    bnb_4bit_use_double_quant=False,
+)
+
+
 NET_ID = "vgn2004"
-ENV = "scheduler"
+ENV = "qlora"
 NUM_WORKERS = 8
 MAX_TOKENS = 64
 MIN_GENERATION = 64
@@ -31,7 +40,8 @@ BATCH_SIZE = 64
 OS_ENV_DICT = {
 "CUDA_VISIBLE_DEVICES": 0,
 "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-"TORCHDYNAMO_DISABLE": 1
+"TORCHDYNAMO_DISABLE": 1,
+"TOKENIZERS_PARALLELISM": "false"
 }
 
 if __name__ == "__main__":
@@ -100,8 +110,8 @@ if __name__ == "__main__":
 
     # Model
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME)
-    model_manager.lorify(LoraConfig(task_type="CAUSAL_LM"))
+    model_manager.load(MODEL_NAME, quantization_config=quantization_config)
+    model_manager.lorify(LoraConfig(r=64, lora_alpha=16, lora_dropout=0.1, bias="none",task_type="CAUSAL_LM"))
     logger.info(model_manager.model)
 
     # Text Generation
@@ -113,6 +123,7 @@ if __name__ == "__main__":
 
     # Training
     train_config = TrainerConfiguration()
+    setattr(train_config, "is_quantized", True)
     trainer = Trainer(model_name=MODEL_NAME,
                       user_config=user_config,
                       system_config=system_config,

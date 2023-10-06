@@ -118,12 +118,13 @@ if __name__ == "__main__":
 
     # Training
     train_config = TrainerConfiguration()
+    setattr(train_config, "is_quantized", True)
     trainer = Trainer(model_name=MODEL_NAME,
                       user_config=user_config,
                       system_config=system_config,
                       tokenizer_config=tokenizer_config,
                       text_gen_config=text_gen_config,
-                      train_config=train_config,
+                  train_config=train_config,
                       data_manager=data_manager,
                       model_manager=model_manager,
                       tokenization_manager=tokenization_manager,

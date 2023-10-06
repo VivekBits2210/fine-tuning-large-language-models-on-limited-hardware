@@ -17,8 +17,17 @@ from data_manager import DataManager
 # TODO: These should be picked up from command line
 from trainer import Trainer
 
+from transformers import BitsAndBytesConfig, Trainer, TrainingArguments, DataCollatorForLanguageModeling, IntervalStrategy
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype="float16",
+    bnb_4bit_use_double_quant=False,
+)
+
+
 NET_ID = "vgn2004"
-ENV = "scheduler"
+ENV = "qlora"
 NUM_WORKERS = 8
 MAX_TOKENS = 64
 MIN_GENERATION = 64
@@ -31,7 +40,8 @@ BATCH_SIZE = 64
 OS_ENV_DICT = {
 "CUDA_VISIBLE_DEVICES": 0,
 "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-"TORCHDYNAMO_DISABLE": 1
+"TORCHDYNAMO_DISABLE": 1,
+"TOKENIZERS_PARALLELISM": "false"
 }
 
 if __name__ == "__main__":
@@ -100,8 +110,13 @@ if __name__ == "__main__":
 
     # Model
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME)
-    model_manager.lorify(LoraConfig(task_type="CAUSAL_LM"))
+    model_manager.load(MODEL_NAME, quantization_config=BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype="float16",
+    bnb_4bit_use_double_quant=False,
+))
+    
     logger.info(model_manager.model)
 
     # Text Generation
@@ -110,19 +125,71 @@ if __name__ == "__main__":
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
     logging.info(f"Generated Text Before Fine-Tuning:\n{text}")
+    
+    # Existing Trainer
+    from peft import prepare_model_for_kbit_training
 
-    # Training
-    train_config = TrainerConfiguration()
-    trainer = Trainer(model_name=MODEL_NAME,
-                      user_config=user_config,
-                      system_config=system_config,
-                      tokenizer_config=tokenizer_config,
-                      text_gen_config=text_gen_config,
-                      train_config=train_config,
-                      data_manager=data_manager,
-                      model_manager=model_manager,
-                      tokenization_manager=tokenization_manager,
-                      training_dataloader=training_dataloader,
-                      validation_dataloader=validation_dataloader
-                      )
-    trainer.run()
+#     model_manager.model.gradient_checkpointing_enable()
+    model_manager.model = prepare_model_for_kbit_training(model_manager.model)
+    model_manager.lorify(LoraConfig(
+    r=64, 
+    lora_alpha=16, 
+    lora_dropout=0.1, 
+    bias="none", 
+    task_type="CAUSAL_LM"))
+    
+    from transformers import TrainerCallback, TrainerControl
+
+    class SampleTextCallback(TrainerCallback):
+        def __init__(self, model, tokenizer, output_dir, prompt_text="This", min_length=64):
+            self.model = model
+            self.tokenizer = tokenizer
+            self.output_dir = output_dir
+            self.prompt_text = prompt_text
+            self.min_length = min_length
+
+        def on_step_begin(self, args, state, control, **kwargs):
+            import os
+            if state.global_step % 50 == 0 and state.global_step > 0:
+                input_ids = self.tokenizer.encode(self.prompt_text, return_tensors="pt").to(self.model.device)
+                sample_outputs = self.model.generate(input_ids=input_ids, 
+                                                     min_length=self.min_length, 
+                                                     num_return_sequences=1, 
+                                                     top_p=0.95,
+                                                     top_k=50,
+                                                     eos_token_id = self.tokenizer.convert_tokens_to_ids("."))
+                text = f"\n{state.global_step}: {self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)}"
+                print(text)
+                
+                sample_file_path = os.path.join(self.output_dir, f"training_samples.txt")
+                with open(sample_file_path, 'a') as file:
+                    file.write(text)
+
+    trainer_callbacks = [SampleTextCallback(model_manager.model, tokenization_manager.tokenizer, "/scratch/vgn2004/fine_tuning/standard")]
+    
+    trainer = Trainer(
+    model=model_manager.model,
+    train_dataset=training_dataset,
+    eval_dataset=validation_dataset,
+    callbacks=trainer_callbacks,
+    args=TrainingArguments(
+        warmup_steps=5,
+        num_train_epochs=50,
+        learning_rate=2e-4,
+        logging_strategy=IntervalStrategy.STEPS,
+        logging_steps=200,
+        evaluation_strategy=IntervalStrategy.STEPS,
+        eval_steps=500,
+        save_strategy=IntervalStrategy.STEPS,
+        save_steps=1000,
+        lr_scheduler_type="linear",
+        output_dir="/scratch/vgn2004/fine_tuning/standard",
+        optim="paged_adamw_8bit"
+    ),
+    data_collator= DataCollatorForLanguageModeling(
+    tokenizer=tokenization_manager.tokenizer,
+    mlm=False,  # For causal LM; set to True if you're using a masked LM like BERT
+    )
+    )
+    model_manager.model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
+    trainer.train()

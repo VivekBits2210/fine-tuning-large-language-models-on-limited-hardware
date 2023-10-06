@@ -1,7 +1,7 @@
 import logging
 import os
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup
 
 from config import (
     SystemConfiguration,
@@ -52,7 +52,14 @@ class Trainer:
         self.model_path = None
         self._setup_logging_and_saving()
 
-        self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr)
+        if self.train_config.is_quantized:
+            logger.info("Picking quantized optimizer...")
+            from bitsandbytes.optim import AdamW
+            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr, is_paged=True, optim_bits=8)
+        else:
+            from transformers import AdamW
+            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr)
+        logger.info(f"Using optimizer: {type(self.optimizer).__name__}")
         self.lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=self.optimizer,
             num_warmup_steps=self.train_config.num_warmup_steps,
