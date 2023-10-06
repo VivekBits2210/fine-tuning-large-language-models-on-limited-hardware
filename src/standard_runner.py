@@ -141,23 +141,21 @@ if __name__ == "__main__":
     from transformers import TrainerCallback, TrainerControl
 
     class SampleTextCallback(TrainerCallback):
-        def __init__(self, model, tokenizer, output_dir, prompt_text="This", min_length=64):
+        def __init__(self, model, tokenizer, output_dir, prompt_text="This", max_length=64):
             self.model = model
             self.tokenizer = tokenizer
             self.output_dir = output_dir
             self.prompt_text = prompt_text
-            self.min_length = min_length
+            self.max_length = max_length
 
         def on_step_begin(self, args, state, control, **kwargs):
             import os
             if state.global_step % 50 == 0 and state.global_step > 0:
                 input_ids = self.tokenizer.encode(self.prompt_text, return_tensors="pt").to(self.model.device)
                 sample_outputs = self.model.generate(input_ids=input_ids, 
-                                                     min_length=self.min_length, 
+                                                     max_length=self.max_length*2, 
                                                      num_return_sequences=1, 
-                                                     top_p=0.95,
-                                                     top_k=50,
-                                                     eos_token_id = self.tokenizer.convert_tokens_to_ids("."))
+                                                     eos_token_id = self.tokenizer.eos_token_id)
                 text = f"\n{state.global_step}: {self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)}"
                 print(text)
                 
@@ -165,7 +163,7 @@ if __name__ == "__main__":
                 with open(sample_file_path, 'a') as file:
                     file.write(text)
 
-    trainer_callbacks = [SampleTextCallback(model_manager.model, tokenization_manager.tokenizer, "/scratch/vgn2004/fine_tuning/standard")]
+    trainer_callbacks = [SampleTextCallback(model_manager.model, tokenization_manager.tokenizer, "/scratch/vgn2004/fine_tuning/standard_non_abrupt")]
     
     trainer = Trainer(
     model=model_manager.model,
@@ -183,7 +181,7 @@ if __name__ == "__main__":
         save_strategy=IntervalStrategy.STEPS,
         save_steps=1000,
         lr_scheduler_type="linear",
-        output_dir="/scratch/vgn2004/fine_tuning/standard",
+        output_dir="/scratch/vgn2004/fine_tuning/standard_non_abrupt",
         optim="paged_adamw_8bit"
     ),
     data_collator= DataCollatorForLanguageModeling(
