@@ -1,6 +1,6 @@
+import argparse
 import logging
 import gc
-import os
 import torch
 
 from config import (
@@ -11,39 +11,60 @@ from config import (
     TextGenConfiguration,
     SystemConfiguration,
     TrainerConfiguration,
-    LoraConfiguration,
 )
+
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
 from model_manager import ModelManager
 from system_monitor import SystemMonitor
+
 from tokenization_manager import TokenizationManager
 from data_manager import DataManager
+
+# TODO: These should be picked up from command line
 from trainer import Trainer
 
-from transformers import BitsAndBytesConfig
-
-quantization_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype="float16",
-    bnb_4bit_use_double_quant=False,
+# Argument parser setup
+parser = argparse.ArgumentParser(description="Runner script for training")
+parser.add_argument("--net-id", type=str, default="vgn2004", help="Net ID")
+parser.add_argument("--env", type=str, default="pre_prod", help="Environment")
+parser.add_argument("--num-workers", type=int, default=8, help="Number of workers")
+parser.add_argument(
+    "--max-tokens", type=int, default=64, help="Max tokens for tokenizer"
+)
+parser.add_argument(
+    "--min-generation", type=int, default=64, help="Min tokens to generate"
+)
+parser.add_argument(
+    "--model-name", type=str, default="facebook/opt-125m", help="Name of the model"
+)
+parser.add_argument(
+    "--dataset-name",
+    type=str,
+    default="NIH_ExPORTER_awarded_grant_text",
+    help="Name of the dataset",
+)
+parser.add_argument(
+    "--batch-size", type=int, default=64, help="Batch size for training"
 )
 
-NET_ID = "vgn2004"
-ENV = "qlora"
-NUM_WORKERS = 8
-MAX_TOKENS = 64
-MIN_GENERATION = 32
-MODEL_NAME = "facebook/opt-125m"
-DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
-TOKENIZER_NAME = "speedup"
-BATCH_SIZE = 64
+args = parser.parse_args()
+
+# Use the arguments
+NET_ID = args.net_id
+ENV = args.env
+NUM_WORKERS = args.num_workers
+MAX_TOKENS = args.max_tokens
+MIN_GENERATION = args.min_generation
+MODEL_NAME = args.model_name
+DATASET_NAME = args.dataset_name
+BATCH_SIZE = args.batch_size
+
+# Constants
 OS_ENV_DICT = {
     "CUDA_VISIBLE_DEVICES": 0,
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
     "TORCHDYNAMO_DISABLE": 1,
-    "TOKENIZERS_PARALLELISM": "false",
 }
 
 if __name__ == "__main__":
@@ -60,6 +81,8 @@ if __name__ == "__main__":
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
 
+    # Configurations
+
     # Setup folder/file path related configurations
     user_config = UserConfiguration(net_id=NET_ID, env=ENV)
     system_config = SystemConfiguration(num_workers=NUM_WORKERS)
@@ -68,6 +91,8 @@ if __name__ == "__main__":
     )
     torch_config = TorchConfiguration()
     torch_config.commit()
+
+    # System configurations
 
     # Add Python packages to sys path
     package_path_manager = PackagePathManager(user_config)
@@ -86,7 +111,14 @@ if __name__ == "__main__":
     data_manager.dataset_name = DATASET_NAME
     data_manager.set_data_collator(tokenization_manager.tokenizer)
 
-    # Fetch data, either from disk or from the compressed dataset file
+    # Tokenize dataset from scratch (skipped)
+    #     data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
+    #                                                     jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+    #     data_manager.create_tokenized_dataset()
+    #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
+
+    # Load from disk
+
     try:
         (
             training_dataset,
@@ -96,9 +128,7 @@ if __name__ == "__main__":
         logger.warning(f"{fe.__repr__()}")
         data_manager.create_dataset_from_jsonl_zst_file(
             name=DATASET_NAME,
-            jsonl_zst_file_path=os.path.join(
-                user_config.cache_path, "NIH_ExPORTER_awarded_grant_text.jsonl.zst"
-            ),
+            jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst",
         )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
         (
@@ -115,11 +145,7 @@ if __name__ == "__main__":
 
     # Model
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME, quantization_config=quantization_config)
-
-    # Add low-rank adapters to the model
-    lora_configuration = LoraConfiguration()
-    model_manager.lorify(lora_configuration, "qlora")
+    model_manager.load(MODEL_NAME)
     logger.info(model_manager.model)
 
     # Text Generation
@@ -134,7 +160,6 @@ if __name__ == "__main__":
     # Training
     train_config = TrainerConfiguration()
     trainer = Trainer(
-        model_name=MODEL_NAME,
         user_config=user_config,
         system_config=system_config,
         tokenizer_config=tokenizer_config,

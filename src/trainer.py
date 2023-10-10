@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 class Trainer:
     def __init__(
         self,
-        model_name,
         user_config: UserConfiguration,
         system_config: SystemConfiguration,
         tokenizer_config: TokenizerConfiguration,
@@ -33,7 +32,7 @@ class Trainer:
         training_dataloader,
         validation_dataloader,
     ):
-        self.model_name = model_name
+        self.model_name = model_manager.model_name
         self.user_config = user_config
         self.system_config = system_config
         self.tokenizer_config = tokenizer_config
@@ -64,7 +63,6 @@ class Trainer:
         )
         self.running_loss = 0.0
 
-    @measure_time_taken
     def _fetch_optimizer(self):
         if self.model_manager.is_quantized:
             from bitsandbytes.optim import AdamW
@@ -83,7 +81,6 @@ class Trainer:
             )
         return optimizer
 
-    @measure_time_taken
     def _setup_logging_and_saving(self):
         model_name = self.model_name
         dataset_name = self.data_manager.dataset_name
@@ -108,7 +105,6 @@ class Trainer:
         if not os.path.exists(self.model_path):
             os.makedirs(self.model_path)
 
-    @measure_time_taken
     def handle_batch(self, epoch, index, batch):
         self.model_manager.model.train()
         # Sample an output from the model, at each sampling interval
@@ -150,7 +146,6 @@ class Trainer:
         with open(f"{self.log_path}/validation.log", "a") as f:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
 
-    @measure_time_taken
     def forward_backward_pass(self, batch):
         self.optimizer.zero_grad(set_to_none=True)
         batch = {

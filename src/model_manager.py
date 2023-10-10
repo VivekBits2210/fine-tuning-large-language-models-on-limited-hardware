@@ -24,7 +24,6 @@ class ModelManager:
         self.model.to(self.device)
         self.__augment_model()
 
-    @measure_time_taken
     def load(self, model_name: str, quantization_config=None) -> None:
         self.model_name = model_name
 
@@ -46,7 +45,6 @@ class ModelManager:
             )
         self.__augment_model()
 
-    @measure_time_taken
     def lorify(self, lora_configuration, module_style):
         lora_config = LoraConfig(
             r=lora_configuration.r,
@@ -78,7 +76,6 @@ class ModelManager:
             num_return_sequences=text_gen_config.num_return_sequences,
         )
 
-    @measure_time_taken
     def infer(self, prompt, text_gen_config):
         prompt.to(self.device)
 
@@ -116,7 +113,6 @@ class ModelManager:
 
         return avg_eval_loss, perplexity
 
-    @measure_time_taken
     def _find_lora_target_modules(self, module_style="qlora"):
         """Find all linear layer names in the model. reference from qlora paper."""
         cls = None
