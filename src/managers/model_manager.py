@@ -62,7 +62,7 @@ class ModelManager:
             target_modules=self._find_lora_target_modules(module_style),
         )
         self.model = get_peft_model(self.model, lora_config)
-        logger.info(f"Using LoRA with configuration: {self.model.peft_config}")
+        logger.info(f"Addling low-rank adapters to model with config as {self.model.peft_config}")
 
     def __augment_model(self):
         #         self.model.gradient_checkpointing_enable()
@@ -111,9 +111,6 @@ class ModelManager:
                 loss = outputs.loss
             total_eval_loss += loss.item()
             avg_eval_loss = total_eval_loss / index
-            logger.info(
-                f"Validation: Batch {index}/{len(validation_dataloader)}, Loss: {avg_eval_loss:.4f}"
-            )
 
         perplexity = torch.exp(torch.as_tensor(avg_eval_loss)).item()
         self.model.train()
