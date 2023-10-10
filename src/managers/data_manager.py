@@ -106,7 +106,6 @@ class DataManager:
             tokenizer=tokenizer, mlm=False
         )
 
-    @measure_time_taken
     def fetch_train_validation_split_from_disk(self):
         if not self.dataset_name:
             raise Exception("You need to set dataset_name in order to fetch from disk!")
