@@ -8,11 +8,18 @@ formatter = logging.Formatter(FORMAT, datefmt="%I:%M %p %Ss")
 
 class LogConfiguration:
     @staticmethod
-    def setup_logging():
+    def setup_logging(log_file_path):
         logger.setLevel(logging.INFO)
+
+        # For stdout
         ch = logging.StreamHandler()
         ch.setFormatter(formatter)
         logger.addHandler(ch)
+
+        # For file
+        fh = logging.FileHandler(log_file_path)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
     @staticmethod
     def set_logging_level(level: str):

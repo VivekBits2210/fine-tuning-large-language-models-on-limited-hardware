@@ -1,6 +1,7 @@
 import logging
 import gc
 import os
+import datetime
 import torch
 
 from config import (
@@ -45,8 +46,13 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
     gc.collect()
 
+    # User configurations
+    # Setup folder/file path related configurations
+    user_config = UserConfiguration(env=ENV)
+
     # Logger setup
-    LogConfiguration.setup_logging()
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    LogConfiguration.setup_logging(os.path.join(user_config.root_path, f"run_log_{timestamp}.log"))
     logger = logging.getLogger(__name__)
 
     # Get initial RAM and GPU utilization
@@ -54,8 +60,7 @@ if __name__ == "__main__":
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
 
-    # Setup folder/file path related configurations
-    user_config = UserConfiguration(env=ENV)
+    # System and tokenizer configurations
     system_config = SystemConfiguration()
     tokenizer_config = TokenizerConfiguration(tokenizer_name=TOKENIZER_NAME)
 
