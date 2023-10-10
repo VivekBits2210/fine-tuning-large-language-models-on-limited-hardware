@@ -110,6 +110,7 @@ class Trainer:
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
             text = self.tokenization_manager.decode(sequence, self.text_gen_config)
+            logger.info(f"Training: Epoch-{epoch} Index-{index} Loss-{self.running_loss/index}")
             logger.info(f"Text:\n{text}")
             with open(f"{self.log_path}/training.log", "a") as f:
                 f.write(f"{epoch}\t{index}\t{self.running_loss/index}\t{text}\n")

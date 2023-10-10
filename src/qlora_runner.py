@@ -118,7 +118,6 @@ if __name__ == "__main__":
     model_manager.load(MODEL_NAME, quantization_configuration=quantization_config)
 
     # LoRA
-    # TOASS: Which modules did the lora configuration apply to?
     # TOASS: Is the rest of the model frozen
     # TOASS: Are the lora weights quantized?
     # TOASS: Are the lora weights updating during fine-tuning?
