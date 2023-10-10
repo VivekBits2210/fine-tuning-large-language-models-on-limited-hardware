@@ -3,8 +3,8 @@ import torch
 from tqdm import tqdm
 from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
-from peft import get_peft_model
-
+from peft import get_peft_model, LoraConfig
+import bitsandbytes as bnb
 from profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
 
@@ -45,7 +45,15 @@ class ModelManager:
         self.__augment_model()
 
     @measure_time_taken
-    def lorify(self, lora_config):
+    def lorify(self, lora_configuration, module_style):
+        lora_config = LoraConfig(
+            r=lora_configuration.r,
+            lora_alpha=lora_configuration.lora_alpha,
+            lora_dropout=lora_configuration.lora_dropout,
+            bias=lora_configuration.bias,
+            task_type=lora_configuration.task_type,
+            target_modules=self._find_lora_target_modules(module_style),
+        )
         self.model = get_peft_model(self.model, lora_config)
         logger.info(f"Using LoRA with configuration: {self.model.peft_config}")
 
@@ -106,3 +114,20 @@ class ModelManager:
         self.model.train()
 
         return avg_eval_loss, perplexity
+
+    @measure_time_taken
+    def _find_lora_target_modules(self, module_style="qlora"):
+        """Find all linear layer names in the model. reference from qlora paper."""
+        cls = None
+        if module_style == "qlora":
+            cls = bnb.nn.Linear4bit
+
+        lora_module_names = set()
+        for name, module in self.model.named_modules():
+            if isinstance(module, cls):
+                # last layer is not add to lora_module_names
+                if "lm_head" in name or "score" in name:
+                    continue
+                names = name.split(".")
+                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+        return sorted(lora_module_names)

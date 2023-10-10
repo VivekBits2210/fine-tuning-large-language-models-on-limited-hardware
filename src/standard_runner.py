@@ -9,8 +9,7 @@ from config import (
     TorchConfiguration,
     TokenizerConfiguration,
     TextGenConfiguration,
-    SystemConfiguration,
-    TrainerConfiguration,
+    SystemConfiguration, LoraConfiguration,
 )
 
 from os_environment_manager import OSEnvironmentManager
@@ -21,15 +20,13 @@ from system_monitor import SystemMonitor
 from tokenization_manager import TokenizationManager
 from data_manager import DataManager
 
-# TODO: These should be picked up from command line
-from trainer import Trainer
-
 from transformers import (
     BitsAndBytesConfig,
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling,
     IntervalStrategy,
+    TrainerCallback
 )
 
 quantization_config = BitsAndBytesConfig(
@@ -161,13 +158,9 @@ if __name__ == "__main__":
 
     #     model_manager.model.gradient_checkpointing_enable()
     model_manager.model = prepare_model_for_kbit_training(model_manager.model)
-    model_manager.lorify(
-        LoraConfig(
-            r=64, lora_alpha=16, lora_dropout=0.1, bias="none", task_type="CAUSAL_LM"
-        )
-    )
-
-    from transformers import TrainerCallback, TrainerControl
+    lora_configuration = LoraConfiguration()
+    model_manager.lorify(lora_configuration, "qlora")
+    logger.info(model_manager.model)
 
     class SampleTextCallback(TrainerCallback):
         def __init__(

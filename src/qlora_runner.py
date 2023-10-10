@@ -10,7 +10,7 @@ from config import (
     TokenizerConfiguration,
     TextGenConfiguration,
     SystemConfiguration,
-    TrainerConfiguration,
+    TrainerConfiguration, LoraConfiguration,
 )
 
 from os_environment_manager import OSEnvironmentManager
@@ -21,7 +21,6 @@ from system_monitor import SystemMonitor
 from tokenization_manager import TokenizationManager
 from data_manager import DataManager
 
-# TODO: These should be picked up from command line
 from trainer import Trainer
 
 from transformers import BitsAndBytesConfig
@@ -32,7 +31,6 @@ quantization_config = BitsAndBytesConfig(
     bnb_4bit_compute_dtype="float16",
     bnb_4bit_use_double_quant=False,
 )
-
 
 NET_ID = "vgn2004"
 ENV = "qlora"
@@ -148,16 +146,9 @@ if __name__ == "__main__":
     # Model
     model_manager = ModelManager(system_config)
     model_manager.load(MODEL_NAME, quantization_config=quantization_config)
-    model_manager.lorify(
-        LoraConfig(
-            r=64,
-            lora_alpha=16,
-            lora_dropout=0.1,
-            bias="none",
-            task_type="CAUSAL_LM",
-            target_modules=find_all_linear_names(model_manager.model),
-        )
-    )
+
+    lora_configuration = LoraConfiguration()
+    model_manager.lorify(lora_configuration, "qlora")
     logger.info(model_manager.model)
 
     # Text Generation

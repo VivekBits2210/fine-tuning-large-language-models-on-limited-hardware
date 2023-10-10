@@ -5,3 +5,4 @@ from .torch_configuration import TorchConfiguration
 from .user_configuration import UserConfiguration
 from .text_gen_configuration import TextGenConfiguration
 from .trainer_configuration import TrainerConfiguration
+from .lora_configuration import LoraConfiguration
