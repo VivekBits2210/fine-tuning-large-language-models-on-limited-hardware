@@ -2,7 +2,7 @@ import logging
 import torch
 from tqdm import tqdm
 from typing import Optional
-from transformers import AutoModelForCausalLM, AutoConfig
+from transformers import AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
 from peft import get_peft_model, LoraConfig
 import bitsandbytes as bnb
 from utilities.profiler_utils import measure_time_taken
@@ -24,17 +24,24 @@ class ModelManager:
         self.model.to(self.device)
         self.__augment_model()
 
-    def load(self, model_name: str, quantization_config=None) -> None:
+    def load(self, model_name: str, quantization_configuration=None) -> None:
         self.model_name = model_name
 
         configuration = AutoConfig.from_pretrained(self.model_name)
 
-        if not quantization_config:
+        if not quantization_configuration:
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name, config=configuration
             )
             self.model.to(self.device)
         else:
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=quantization_configuration.load_in_4bit,
+                bnb_4bit_quant_type=quantization_configuration.bnb_4bit_quant_type,
+                bnb_4bit_compute_dtype=quantization_configuration.bnb_4bit_compute_dtype,
+                bnb_4bit_use_double_quant=quantization_configuration.bnb_4bit_use_double_quant,
+            )
+
             logger.info(f"Quantizing the model with config as {quantization_config}")
             self.is_quantized = True
             self.model = AutoModelForCausalLM.from_pretrained(

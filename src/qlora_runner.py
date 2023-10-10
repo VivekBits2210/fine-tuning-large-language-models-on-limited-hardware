@@ -12,6 +12,7 @@ from config import (
     SystemConfiguration,
     TrainerConfiguration,
     LoraConfiguration,
+    QuantizationConfiguration,
 )
 from managers import OSEnvironmentManager
 from managers import PackagePathManager
@@ -21,17 +22,12 @@ from managers import TokenizationManager
 from managers import DataManager
 from trainer import Trainer
 
-from transformers import BitsAndBytesConfig
-
-
 # TODO: Every run has a set of configurations that is "cared" for. These are stored separatly while logging
 # TODO: Collate all configurations and store as 1 config. If the "cared" for config doesn't contain a config,
 #  default to the configuration in the collation
 # TODO: Only 2 config columns are needed - "cared" and "all"
 # Note: What defines a run? A concatenation of the cared configurations and their values
 # The name of the run should also be the name of the environment where the checkpoints are stored
-
-
 ENV = "qlora_simplified"
 MODEL_NAME = "facebook/opt-125m"
 DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
@@ -114,17 +110,12 @@ if __name__ == "__main__":
 
     # Quantization
     # TOASS: Is bfloat available?
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype="float16",
-        bnb_4bit_use_double_quant=False,
-    )
+    quantization_config = QuantizationConfiguration()
 
     # Transformer
     # TOASS: Was the model quantized?
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME, quantization_config=quantization_config)
+    model_manager.load(MODEL_NAME, quantization_configuration=quantization_config)
 
     # LoRA
     # TOASS: Which modules did the lora configuration apply to?
