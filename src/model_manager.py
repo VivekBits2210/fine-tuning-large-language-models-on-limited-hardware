@@ -24,30 +24,34 @@ class ModelManager:
         self.__augment_model()
 
     @measure_time_taken
-    def load(self, model_name: str, quantization_config = None) -> None:
+    def load(self, model_name: str, quantization_config=None) -> None:
         self.model_name = model_name
 
         configuration = AutoConfig.from_pretrained(self.model_name)
-        
+
         if not quantization_config:
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, config=configuration)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name, config=configuration
+            )
             self.model.to(self.device)
         else:
             logger.info(f"Quantizing the model with config as {quantization_config}")
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name, 
-                                                              config=configuration, 
-                                                              device_map = 'auto', 
-                                                              quantization_config = quantization_config)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                config=configuration,
+                device_map="auto",
+                quantization_config=quantization_config,
+            )
         self.__augment_model()
-        
+
     @measure_time_taken
     def lorify(self, lora_config):
         self.model = get_peft_model(self.model, lora_config)
         logger.info(f"Using LoRA with configuration: {self.model.peft_config}")
 
     def __augment_model(self):
-#         self.model.gradient_checkpointing_enable()
-#         self.model.enable_input_require_grads()
+        #         self.model.gradient_checkpointing_enable()
+        #         self.model.enable_input_require_grads()
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 

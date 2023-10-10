@@ -3,8 +3,15 @@ import gc
 import torch
 from peft import LoraConfig
 
-from config import UserConfiguration, LogConfiguration, TorchConfiguration, TokenizerConfiguration, \
-TextGenConfiguration, SystemConfiguration, TrainerConfiguration
+from config import (
+    UserConfiguration,
+    LogConfiguration,
+    TorchConfiguration,
+    TokenizerConfiguration,
+    TextGenConfiguration,
+    SystemConfiguration,
+    TrainerConfiguration,
+)
 
 from os_environment_manager import OSEnvironmentManager
 from package_path_manager import PackagePathManager
@@ -18,6 +25,7 @@ from data_manager import DataManager
 from trainer import Trainer
 
 from transformers import BitsAndBytesConfig
+
 quantization_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
@@ -38,27 +46,28 @@ BATCH_SIZE = 64
 
 # Constants
 OS_ENV_DICT = {
-"CUDA_VISIBLE_DEVICES": 0,
-"TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-"TORCHDYNAMO_DISABLE": 1,
-"TOKENIZERS_PARALLELISM": "false"
+    "CUDA_VISIBLE_DEVICES": 0,
+    "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
+    "TORCHDYNAMO_DISABLE": 1,
+    "TOKENIZERS_PARALLELISM": "false",
 }
+
 
 # How to actually target qlora effectively
 def find_all_linear_names(peft_model):
     """Find all linear layer names in the model. reference from qlora paper."""
     import bitsandbytes as bnb
+
     cls = bnb.nn.Linear4bit
     lora_module_names = set()
     for name, module in peft_model.named_modules():
         if isinstance(module, cls):
             # last layer is not add to lora_module_names
-            if 'lm_head' in name:
+            if "lm_head" in name:
                 continue
-            names = name.split('.')
+            names = name.split(".")
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
         return sorted(lora_module_names)
-
 
 
 if __name__ == "__main__":
@@ -80,7 +89,9 @@ if __name__ == "__main__":
     # Setup folder/file path related configurations
     user_config = UserConfiguration(net_id=NET_ID, env=ENV)
     system_config = SystemConfiguration(num_workers=NUM_WORKERS)
-    tokenizer_config = TokenizerConfiguration(max_tokens=MAX_TOKENS, tokenizer_name = TOKENIZER_NAME)
+    tokenizer_config = TokenizerConfiguration(
+        max_tokens=MAX_TOKENS, tokenizer_name=TOKENIZER_NAME
+    )
     torch_config = TorchConfiguration()
     torch_config.commit()
 
@@ -111,35 +122,48 @@ if __name__ == "__main__":
 
     # Load from disk
     try:
-        training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+        (
+            training_dataset,
+            validation_dataset,
+        ) = data_manager.fetch_train_validation_split_from_disk()
     except FileNotFoundError as fe:
         logger.warning(f"{fe.__repr__()}")
-        data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,                                             jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+        data_manager.create_dataset_from_jsonl_zst_file(
+            name=DATASET_NAME,
+            jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst",
+        )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
-        training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
+        (
+            training_dataset,
+            validation_dataset,
+        ) = data_manager.fetch_train_validation_split()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
     )
 
     # Model
     model_manager = ModelManager(system_config)
     model_manager.load(MODEL_NAME, quantization_config=quantization_config)
-    model_manager.lorify(LoraConfig(r=64, 
-                                    lora_alpha=16, 
-                                    lora_dropout=0.1, 
-                                    bias="none",
-                                    task_type="CAUSAL_LM", 
-                                    target_modules=find_all_linear_names(model_manager.model)
-                                   )
-                        )
+    model_manager.lorify(
+        LoraConfig(
+            r=64,
+            lora_alpha=16,
+            lora_dropout=0.1,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=find_all_linear_names(model_manager.model),
+        )
+    )
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION)
+    text_gen_config = TextGenConfiguration(
+        tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION
+    )
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
@@ -148,16 +172,17 @@ if __name__ == "__main__":
     # Training
     train_config = TrainerConfiguration()
     setattr(train_config, "is_quantized", True)
-    trainer = Trainer(model_name=MODEL_NAME,
-                      user_config=user_config,
-                      system_config=system_config,
-                      tokenizer_config=tokenizer_config,
-                      text_gen_config=text_gen_config,
-                      train_config=train_config,
-                      data_manager=data_manager,
-                      model_manager=model_manager,
-                      tokenization_manager=tokenization_manager,
-                      training_dataloader=training_dataloader,
-                      validation_dataloader=validation_dataloader
-                      )
+    trainer = Trainer(
+        model_name=MODEL_NAME,
+        user_config=user_config,
+        system_config=system_config,
+        tokenizer_config=tokenizer_config,
+        text_gen_config=text_gen_config,
+        train_config=train_config,
+        data_manager=data_manager,
+        model_manager=model_manager,
+        tokenization_manager=tokenization_manager,
+        training_dataloader=training_dataloader,
+        validation_dataloader=validation_dataloader,
+    )
     trainer.run()

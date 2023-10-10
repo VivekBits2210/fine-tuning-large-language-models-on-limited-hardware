@@ -55,15 +55,26 @@ class Trainer:
         if self.train_config.is_quantized:
             logger.info("Picking quantized optimizer...")
             from bitsandbytes.optim import AdamW
-            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr, is_paged=True, optim_bits=32)
+
+            self.optimizer = AdamW(
+                params=self.model_manager.model.parameters(),
+                lr=self.train_config.lr,
+                is_paged=True,
+                optim_bits=32,
+            )
         else:
             from transformers import AdamW
-            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr)
+
+            self.optimizer = AdamW(
+                params=self.model_manager.model.parameters(), lr=self.train_config.lr
+            )
         logger.info(f"Using optimizer: {type(self.optimizer).__name__}")
         self.lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=self.optimizer,
             num_warmup_steps=self.train_config.num_warmup_steps,
-            num_training_steps=(len(self.training_dataloader) * self.train_config.epochs),
+            num_training_steps=(
+                len(self.training_dataloader) * self.train_config.epochs
+            ),
         )
         self.running_loss = 0.0
 

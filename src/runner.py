@@ -29,11 +29,24 @@ parser = argparse.ArgumentParser(description="Runner script for training")
 parser.add_argument("--net-id", type=str, default="vgn2004", help="Net ID")
 parser.add_argument("--env", type=str, default="pre_prod", help="Environment")
 parser.add_argument("--num-workers", type=int, default=8, help="Number of workers")
-parser.add_argument("--max-tokens", type=int, default=64, help="Max tokens for tokenizer")
-parser.add_argument("--min-generation", type=int, default=64, help="Min tokens to generate")
-parser.add_argument("--model-name", type=str, default="facebook/opt-125m", help="Name of the model")
-parser.add_argument("--dataset-name", type=str, default="NIH_ExPORTER_awarded_grant_text", help="Name of the dataset")
-parser.add_argument("--batch-size", type=int, default=64, help="Batch size for training")
+parser.add_argument(
+    "--max-tokens", type=int, default=64, help="Max tokens for tokenizer"
+)
+parser.add_argument(
+    "--min-generation", type=int, default=64, help="Min tokens to generate"
+)
+parser.add_argument(
+    "--model-name", type=str, default="facebook/opt-125m", help="Name of the model"
+)
+parser.add_argument(
+    "--dataset-name",
+    type=str,
+    default="NIH_ExPORTER_awarded_grant_text",
+    help="Name of the dataset",
+)
+parser.add_argument(
+    "--batch-size", type=int, default=64, help="Batch size for training"
+)
 
 args = parser.parse_args()
 
@@ -73,7 +86,9 @@ if __name__ == "__main__":
     # Setup folder/file path related configurations
     user_config = UserConfiguration(net_id=NET_ID, env=ENV)
     system_config = SystemConfiguration(num_workers=NUM_WORKERS)
-    tokenizer_config = TokenizerConfiguration(max_tokens=MAX_TOKENS, tokenizer_name = TOKENIZER_NAME)
+    tokenizer_config = TokenizerConfiguration(
+        max_tokens=MAX_TOKENS, tokenizer_name=TOKENIZER_NAME
+    )
     torch_config = TorchConfiguration()
     torch_config.commit()
 
@@ -105,12 +120,21 @@ if __name__ == "__main__":
     # Load from disk
 
     try:
-        training_dataset, validation_dataset = data_manager.fetch_train_validation_split_from_disk()
+        (
+            training_dataset,
+            validation_dataset,
+        ) = data_manager.fetch_train_validation_split_from_disk()
     except FileNotFoundError as fe:
         logger.warning(f"{fe.__repr__()}")
-        data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,                                             jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+        data_manager.create_dataset_from_jsonl_zst_file(
+            name=DATASET_NAME,
+            jsonl_zst_file_path="/scratch/vgn2004/fine_tuning/datasets/NIH_ExPORTER_awarded_grant_text.jsonl.zst",
+        )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
-        training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
+        (
+            training_dataset,
+            validation_dataset,
+        ) = data_manager.fetch_train_validation_split()
 
     # Dataloaders
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
