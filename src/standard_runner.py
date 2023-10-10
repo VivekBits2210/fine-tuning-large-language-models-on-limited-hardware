@@ -9,7 +9,7 @@ from config import (
     TokenizerConfiguration,
     TextGenConfiguration,
     SystemConfiguration,
-    LoraConfiguration,
+    LoraConfiguration, QuantizationConfiguration,
 )
 
 from managers import (
@@ -29,14 +29,6 @@ from transformers import (
     IntervalStrategy,
     TrainerCallback,
 )
-
-quantization_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype="float16",
-    bnb_4bit_use_double_quant=False,
-)
-
 
 NET_ID = "vgn2004"
 ENV = "qlora"
@@ -125,16 +117,16 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
     )
 
+
+    # Quantization
+    # TOASS: Is bfloat available?
+    quantization_config = QuantizationConfiguration()
+
     # Model
     model_manager = ModelManager(system_config)
     model_manager.load(
         MODEL_NAME,
-        quantization_config=BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype="float16",
-            bnb_4bit_use_double_quant=False,
-        ),
+        quantization_configuration=quantization_config
     )
 
     logger.info(model_manager.model)
