@@ -10,10 +10,10 @@ from config import (
     TrainerConfiguration,
     TextGenConfiguration,
 )
-from data_manager import DataManager
-from model_manager import ModelManager
-from profiler_utils import measure_time_taken
-from tokenization_manager import TokenizationManager
+from managers import DataManager
+from managers import ModelManager
+from utilities.profiler_utils import measure_time_taken
+from managers import TokenizationManager
 
 logger = logging.getLogger(__name__)
 

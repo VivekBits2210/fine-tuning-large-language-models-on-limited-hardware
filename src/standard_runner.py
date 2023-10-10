@@ -12,13 +12,12 @@ from config import (
     LoraConfiguration,
 )
 
-from os_environment_manager import OSEnvironmentManager
-from package_path_manager import PackagePathManager
-from model_manager import ModelManager
-from system_monitor import SystemMonitor
-
-from tokenization_manager import TokenizationManager
-from data_manager import DataManager
+from managers import OSEnvironmentManager
+from managers import PackagePathManager
+from managers import ModelManager
+from managers import SystemMonitor
+from managers import TokenizationManager
+from managers import DataManager
 
 from transformers import (
     BitsAndBytesConfig,

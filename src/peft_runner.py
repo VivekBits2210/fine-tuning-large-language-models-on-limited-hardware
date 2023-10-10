@@ -13,13 +13,13 @@ from config import (
     TrainerConfiguration,
 )
 
-from os_environment_manager import OSEnvironmentManager
-from package_path_manager import PackagePathManager
-from model_manager import ModelManager
-from system_monitor import SystemMonitor
+from managers import OSEnvironmentManager
+from managers import PackagePathManager
+from managers import ModelManager
+from managers import SystemMonitor
 
-from tokenization_manager import TokenizationManager
-from data_manager import DataManager
+from managers import TokenizationManager
+from managers import DataManager
 
 # TODO: These should be picked up from command line
 from trainer import Trainer

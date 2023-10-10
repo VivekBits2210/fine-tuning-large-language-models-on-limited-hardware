@@ -1,4 +1,3 @@
-import argparse
 import logging
 import gc
 import torch
@@ -13,52 +12,34 @@ from config import (
     TrainerConfiguration,
 )
 
-from os_environment_manager import OSEnvironmentManager
-from package_path_manager import PackagePathManager
-from model_manager import ModelManager
-from system_monitor import SystemMonitor
+from managers import OSEnvironmentManager
+from managers import PackagePathManager
+from managers import ModelManager
+from managers import SystemMonitor
 
-from tokenization_manager import TokenizationManager
-from data_manager import DataManager
+from managers import TokenizationManager
+from managers import DataManager
 
 # TODO: These should be picked up from command line
 from trainer import Trainer
 
-# Argument parser setup
-parser = argparse.ArgumentParser(description="Runner script for training")
-parser.add_argument("--net-id", type=str, default="vgn2004", help="Net ID")
-parser.add_argument("--env", type=str, default="pre_prod", help="Environment")
-parser.add_argument("--num-workers", type=int, default=8, help="Number of workers")
-parser.add_argument(
-    "--max-tokens", type=int, default=64, help="Max tokens for tokenizer"
-)
-parser.add_argument(
-    "--min-generation", type=int, default=64, help="Min tokens to generate"
-)
-parser.add_argument(
-    "--model-name", type=str, default="facebook/opt-125m", help="Name of the model"
-)
-parser.add_argument(
-    "--dataset-name",
-    type=str,
-    default="NIH_ExPORTER_awarded_grant_text",
-    help="Name of the dataset",
-)
-parser.add_argument(
-    "--batch-size", type=int, default=64, help="Batch size for training"
+from transformers import BitsAndBytesConfig
+
+quantization_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+    #     llm_int8_skip_modules=["lm_head"],
+    #     llm_int8_threshold=3.0
 )
 
-args = parser.parse_args()
-
-# Use the arguments
-NET_ID = args.net_id
-ENV = args.env
-NUM_WORKERS = args.num_workers
-MAX_TOKENS = args.max_tokens
-MIN_GENERATION = args.min_generation
-MODEL_NAME = args.model_name
-DATASET_NAME = args.dataset_name
-BATCH_SIZE = args.batch_size
+NET_ID = "vgn2004"
+ENV = "quantized"
+NUM_WORKERS = 8
+MAX_TOKENS = 64
+MIN_GENERATION = 64
+MODEL_NAME = "facebook/opt-125m"
+DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
+TOKENIZER_NAME = "sped_up"
+BATCH_SIZE = 64
 
 # Constants
 OS_ENV_DICT = {
@@ -118,7 +99,6 @@ if __name__ == "__main__":
     #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
 
     # Load from disk
-
     try:
         (
             training_dataset,
@@ -145,7 +125,7 @@ if __name__ == "__main__":
 
     # Model
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME)
+    model_manager.load(MODEL_NAME, quantization_config=quantization_config)
     logger.info(model_manager.model)
 
     # Text Generation
@@ -160,6 +140,7 @@ if __name__ == "__main__":
     # Training
     train_config = TrainerConfiguration()
     trainer = Trainer(
+        model_name=MODEL_NAME,
         user_config=user_config,
         system_config=system_config,
         tokenizer_config=tokenizer_config,
@@ -171,4 +152,4 @@ if __name__ == "__main__":
         training_dataloader=training_dataloader,
         validation_dataloader=validation_dataloader,
     )
-    trainer.train()
+    trainer.run()

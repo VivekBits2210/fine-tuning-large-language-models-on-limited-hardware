@@ -5,7 +5,7 @@ from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from transformers import DataCollatorForLanguageModeling
 
-from profiler_utils import measure_time_taken
+from utilities.profiler_utils import measure_time_taken
 from config import UserConfiguration, TokenizerConfiguration, SystemConfiguration
 
 logger = logging.getLogger(__name__)

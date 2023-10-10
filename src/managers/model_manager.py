@@ -5,7 +5,7 @@ from typing import Optional
 from transformers import AutoModelForCausalLM, AutoConfig
 from peft import get_peft_model, LoraConfig
 import bitsandbytes as bnb
-from profiler_utils import measure_time_taken
+from utilities.profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
 
 logger = logging.getLogger(__name__)

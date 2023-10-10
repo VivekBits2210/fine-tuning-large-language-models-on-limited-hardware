@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer
 
-from profiler_utils import measure_time_taken
+from utilities.profiler_utils import measure_time_taken
 from config.user_configuration import UserConfiguration
 from config.tokenizer_configuration import TokenizerConfiguration
 
