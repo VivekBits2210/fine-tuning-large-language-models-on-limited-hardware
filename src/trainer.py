@@ -169,5 +169,9 @@ class Trainer:
             ):
                 self.handle_batch(epoch, index, batch)
 
+            logger.info(f"Training Loss after Epoch {epoch}: {self.running_loss / self.num_batches}")
+
+        logger.info(f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
+
         self.model_manager.model.save_pretrained(self.model_path)
         self.tokenization_manager.tokenizer.save_pretrained(self.model_path)
