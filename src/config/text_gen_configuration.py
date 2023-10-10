@@ -1,8 +1,7 @@
 class TextGenConfiguration:
     def __init__(self, tokenizer, **kwargs):
         self.eos_token = tokenizer.eos_token
-        self.min_tokens_to_generate = kwargs.get("min_tokens_to_generate")
-
+        self.min_tokens_to_generate = kwargs.get("min_tokens_to_generate", 32)
         self.beginning_of_sentence_token_id = kwargs.get(
             "beginning_of_sentence_token_id", tokenizer.bos_token_id
         )

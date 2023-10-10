@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 class UserConfiguration:
     def __init__(self, **kwargs):
-        self.net_id = kwargs.get("net_id")
         self.env = kwargs.get("env")
+        self.net_id = kwargs.get("net_id", "vgn2004")
 
         # Set the base directory depending on the OS
         if os.name == "posix":  # UNIX-like systems

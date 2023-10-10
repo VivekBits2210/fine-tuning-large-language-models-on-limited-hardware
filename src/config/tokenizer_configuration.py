@@ -1,6 +1,6 @@
 class TokenizerConfiguration:
     def __init__(self, **kwargs):
-        self.max_tokens = kwargs.get("max_tokens")
+        self.max_tokens = kwargs.get("max_tokens", 64)
         self.tokenizer_name = (
             f"{kwargs.get('tokenizer_name', 'default')}_{str(self.max_tokens)}"
         )

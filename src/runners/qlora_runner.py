@@ -23,18 +23,16 @@ from trainer import Trainer
 
 from transformers import BitsAndBytesConfig
 
-quantization_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype="float16",
-    bnb_4bit_use_double_quant=False,
-)
 
-NET_ID = "vgn2004"
-ENV = "qlora"
-NUM_WORKERS = 8
-MAX_TOKENS = 64
-MIN_GENERATION = 32
+# TODO: Every run has a set of configurations that is "cared" for. These are stored separatly while logging
+# TODO: Collate all configurations and store as 1 config. If the "cared" for config doesn't contain a config,
+#  default to the configuration in the collation
+# TODO: Only 2 config columns are needed - "cared" and "all"
+# Note: What defines a run? A concatenation of the cared configurations and their values
+# The name of the run should also be the name of the environment where the checkpoints are stored
+
+
+ENV = "qlora_simplified"
 MODEL_NAME = "facebook/opt-125m"
 DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
 TOKENIZER_NAME = "speedup"
@@ -51,7 +49,7 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
     gc.collect()
 
-    # Configure the logger, needed for initial utilization checks
+    # Logger setup
     LogConfiguration.setup_logging()
     logger = logging.getLogger(__name__)
 
@@ -61,11 +59,11 @@ if __name__ == "__main__":
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
 
     # Setup folder/file path related configurations
-    user_config = UserConfiguration(net_id=NET_ID, env=ENV)
-    system_config = SystemConfiguration(num_workers=NUM_WORKERS)
-    tokenizer_config = TokenizerConfiguration(
-        max_tokens=MAX_TOKENS, tokenizer_name=TOKENIZER_NAME
-    )
+    user_config = UserConfiguration(env=ENV)
+    system_config = SystemConfiguration()
+    tokenizer_config = TokenizerConfiguration(tokenizer_name=TOKENIZER_NAME)
+
+    # Setup and commit torch configurations
     torch_config = TorchConfiguration()
     torch_config.commit()
 
@@ -81,12 +79,12 @@ if __name__ == "__main__":
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
     tokenization_manager.load_for_model(MODEL_NAME)
 
-    # Datasets
+    # Data management and config
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = DATASET_NAME
     data_manager.set_data_collator(tokenization_manager.tokenizer)
 
-    # Fetch data, either from disk or from the compressed dataset file
+    # Fetch dataset
     try:
         (
             training_dataset,
@@ -97,7 +95,7 @@ if __name__ == "__main__":
         data_manager.create_dataset_from_jsonl_zst_file(
             name=DATASET_NAME,
             jsonl_zst_file_path=os.path.join(
-                user_config.cache_path, "NIH_ExPORTER_awarded_grant_text.jsonl.zst"
+                user_config.cache_path, f"{DATASET_NAME}.jsonl.zst"
             ),
         )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
@@ -106,25 +104,40 @@ if __name__ == "__main__":
             validation_dataset,
         ) = data_manager.fetch_train_validation_split()
 
-    # Dataloaders
+    # Data loaders
+    # TOASS: What do the snippets look like? Is the size of a snippet less than MAX_TOKENS?
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
         batch_size=BATCH_SIZE,
     )
 
-    # Model
+    # Quantization
+    # TOASS: Is bfloat available?
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype="float16",
+        bnb_4bit_use_double_quant=False,
+    )
+
+    # Transformer
+    # TOASS: Was the model quantized?
     model_manager = ModelManager(system_config)
     model_manager.load(MODEL_NAME, quantization_config=quantization_config)
 
-    # Add low-rank adapters to the model
+    # LoRA
+    # TOASS: Which modules did the lora configuration apply to?
+    # TOASS: Is the rest of the model frozen
+    # TOASS: Are the lora weights quantized?
+    # TOASS: Are the lora weights updating during fine-tuning?
     lora_configuration = LoraConfiguration()
     model_manager.lorify(lora_configuration, module_style="qlora")
     logger.info(model_manager.model)
 
     # Text Generation
     text_gen_config = TextGenConfiguration(
-        tokenization_manager.tokenizer, min_tokens_to_generate=MIN_GENERATION
+        tokenization_manager.tokenizer
     )
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
