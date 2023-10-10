@@ -22,6 +22,7 @@ from data_manager import DataManager
 from trainer import Trainer
 
 from transformers import BitsAndBytesConfig
+
 quantization_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
@@ -95,7 +96,9 @@ if __name__ == "__main__":
         logger.warning(f"{fe.__repr__()}")
         data_manager.create_dataset_from_jsonl_zst_file(
             name=DATASET_NAME,
-            jsonl_zst_file_path=os.path.join(user_config.cache_path, "NIH_ExPORTER_awarded_grant_text.jsonl.zst")
+            jsonl_zst_file_path=os.path.join(
+                user_config.cache_path, "NIH_ExPORTER_awarded_grant_text.jsonl.zst"
+            ),
         )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
         (

@@ -77,6 +77,7 @@ class Trainer:
             )
         else:
             from transformers import AdamW
+
             optimizer = AdamW(
                 params=self.model_manager.model.parameters(), lr=self.train_config.lr
             )

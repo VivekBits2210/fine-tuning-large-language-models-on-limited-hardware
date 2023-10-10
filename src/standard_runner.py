@@ -8,7 +8,8 @@ from config import (
     TorchConfiguration,
     TokenizerConfiguration,
     TextGenConfiguration,
-    SystemConfiguration, LoraConfiguration,
+    SystemConfiguration,
+    LoraConfiguration,
 )
 
 from os_environment_manager import OSEnvironmentManager
@@ -25,7 +26,7 @@ from transformers import (
     TrainingArguments,
     DataCollatorForLanguageModeling,
     IntervalStrategy,
-    TrainerCallback
+    TrainerCallback,
 )
 
 quantization_config = BitsAndBytesConfig(
@@ -167,6 +168,7 @@ if __name__ == "__main__":
 
         def on_step_begin(self, args, state, control, **kwargs):
             import os
+
             if state.global_step % 500 == 0 and state.global_step > 0:
                 self.model.config.use_cache = True
                 self.model.eval()
