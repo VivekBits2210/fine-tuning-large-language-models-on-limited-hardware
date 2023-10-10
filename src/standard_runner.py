@@ -1,7 +1,6 @@
 import logging
 import gc
 import torch
-from peft import LoraConfig
 
 from config import (
     UserConfiguration,
@@ -99,12 +98,6 @@ if __name__ == "__main__":
     data_manager.dataset_name = DATASET_NAME
     data_manager.set_data_collator(tokenization_manager.tokenizer)
 
-    # Tokenize dataset from scratch (skipped)
-    #     data_manager.create_dataset_from_jsonl_zst_file(name=DATASET_NAME,
-    #                                                     jsonl_zst_file_path="E:\\NIH_ExPORTER_awarded_grant_text.jsonl.zst")
-    #     data_manager.create_tokenized_dataset()
-    #     training_dataset, validation_dataset = data_manager.fetch_train_validation_split()
-
     # Load from disk
     try:
         (
@@ -174,8 +167,9 @@ if __name__ == "__main__":
 
         def on_step_begin(self, args, state, control, **kwargs):
             import os
-
             if state.global_step % 500 == 0 and state.global_step > 0:
+                self.model.config.use_cache = True
+                self.model.eval()
                 input_ids = self.tokenizer.encode(
                     self.prompt_text, return_tensors="pt"
                 ).to(self.model.device)
@@ -185,6 +179,9 @@ if __name__ == "__main__":
                     num_return_sequences=1,
                     eos_token_id=self.tokenizer.eos_token_id,
                 )
+                self.model.train()
+                self.model.config.use_cache = False
+
                 text = f"\n{state.global_step}: {self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)}"
                 print(text)
 
@@ -223,7 +220,7 @@ if __name__ == "__main__":
         ),
         data_collator=DataCollatorForLanguageModeling(
             tokenizer=tokenization_manager.tokenizer,
-            mlm=False,  # For causal LM; set to True if you're using a masked LM like BERT
+            mlm=False,
         ),
     )
     model_manager.model.config.use_cache = (

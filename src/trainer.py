@@ -52,22 +52,8 @@ class Trainer:
         self.model_path = None
         self._setup_logging_and_saving()
 
-        if self.train_config.is_quantized:
-            logger.info("Picking quantized optimizer...")
-            from bitsandbytes.optim import AdamW
+        self.optimizer = self._fetch_optimizer()
 
-            self.optimizer = AdamW(
-                params=self.model_manager.model.parameters(),
-                lr=self.train_config.lr,
-                is_paged=True,
-                optim_bits=32,
-            )
-        else:
-            from transformers import AdamW
-
-            self.optimizer = AdamW(
-                params=self.model_manager.model.parameters(), lr=self.train_config.lr
-            )
         logger.info(f"Using optimizer: {type(self.optimizer).__name__}")
         self.lr_scheduler = get_linear_schedule_with_warmup(
             optimizer=self.optimizer,
@@ -77,6 +63,24 @@ class Trainer:
             ),
         )
         self.running_loss = 0.0
+
+    @measure_time_taken
+    def _fetch_optimizer(self):
+        if self.model_manager.is_quantized:
+            from bitsandbytes.optim import AdamW
+
+            optimizer = AdamW(
+                params=self.model_manager.model.parameters(),
+                lr=self.train_config.lr,
+                is_paged=self.train_config.is_optimizer_paged,
+                optim_bits=self.train_config.optim_bits,
+            )
+        else:
+            from transformers import AdamW
+            optimizer = AdamW(
+                params=self.model_manager.model.parameters(), lr=self.train_config.lr
+            )
+        return optimizer
 
     @measure_time_taken
     def _setup_logging_and_saving(self):
@@ -159,7 +163,7 @@ class Trainer:
         self.optimizer.step()
         self.lr_scheduler.step()
 
-    def run(self):
+    def train(self):
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")

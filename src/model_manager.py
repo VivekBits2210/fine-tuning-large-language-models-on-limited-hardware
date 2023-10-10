@@ -16,6 +16,7 @@ class ModelManager:
         self.device = system_config.device
         self.model = None
         self.model_name: Optional[str] = None
+        self.is_quantized = False
 
     @measure_time_taken
     def load_from_path(self, load_path: str) -> None:
@@ -36,6 +37,7 @@ class ModelManager:
             self.model.to(self.device)
         else:
             logger.info(f"Quantizing the model with config as {quantization_config}")
+            self.is_quantized = True
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
                 config=configuration,
@@ -85,7 +87,6 @@ class ModelManager:
 
         with torch.no_grad():
             output_sequence = self._generate_tokens(prompt, text_gen_config)
-
         self.model.train()
         self.model.config.use_cache = False
 

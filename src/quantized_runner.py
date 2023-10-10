@@ -139,7 +139,6 @@ if __name__ == "__main__":
 
     # Training
     train_config = TrainerConfiguration()
-    setattr(train_config, "is_quantized", True)
     trainer = Trainer(
         model_name=MODEL_NAME,
         user_config=user_config,
