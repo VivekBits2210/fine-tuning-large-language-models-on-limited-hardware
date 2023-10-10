@@ -30,7 +30,7 @@ NET_ID = "vgn2004"
 ENV = "qlora"
 NUM_WORKERS = 8
 MAX_TOKENS = 64
-MIN_GENERATION = 64
+MIN_GENERATION = 32
 MODEL_NAME = "facebook/opt-125m"
 DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
 TOKENIZER_NAME = "speedup"
@@ -43,6 +43,23 @@ OS_ENV_DICT = {
 "TORCHDYNAMO_DISABLE": 1,
 "TOKENIZERS_PARALLELISM": "false"
 }
+
+# How to actually target qlora effectively
+def find_all_linear_names(peft_model):
+    """Find all linear layer names in the model. reference from qlora paper."""
+    import bitsandbytes as bnb
+    cls = bnb.nn.Linear4bit
+    lora_module_names = set()
+    for name, module in peft_model.named_modules():
+        if isinstance(module, cls):
+            # last layer is not add to lora_module_names
+            if 'lm_head' in name:
+                continue
+            names = name.split('.')
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+        return sorted(lora_module_names)
+
+
 
 if __name__ == "__main__":
     # Clear the GPU
@@ -111,7 +128,14 @@ if __name__ == "__main__":
     # Model
     model_manager = ModelManager(system_config)
     model_manager.load(MODEL_NAME, quantization_config=quantization_config)
-    model_manager.lorify(LoraConfig(r=64, lora_alpha=16, lora_dropout=0.1, bias="none",task_type="CAUSAL_LM"))
+    model_manager.lorify(LoraConfig(r=64, 
+                                    lora_alpha=16, 
+                                    lora_dropout=0.1, 
+                                    bias="none",
+                                    task_type="CAUSAL_LM", 
+                                    target_modules=find_all_linear_names(model_manager.model)
+                                   )
+                        )
     logger.info(model_manager.model)
 
     # Text Generation

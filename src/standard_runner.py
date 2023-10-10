@@ -150,10 +150,10 @@ if __name__ == "__main__":
 
         def on_step_begin(self, args, state, control, **kwargs):
             import os
-            if state.global_step % 50 == 0 and state.global_step > 0:
+            if state.global_step % 500 == 0 and state.global_step > 0:
                 input_ids = self.tokenizer.encode(self.prompt_text, return_tensors="pt").to(self.model.device)
                 sample_outputs = self.model.generate(input_ids=input_ids, 
-                                                     max_length=self.max_length*2, 
+                                                     max_length=self.max_length, 
                                                      num_return_sequences=1, 
                                                      eos_token_id = self.tokenizer.eos_token_id)
                 text = f"\n{state.global_step}: {self.tokenizer.decode(sample_outputs[0], skip_special_tokens=True)}"
@@ -163,7 +163,7 @@ if __name__ == "__main__":
                 with open(sample_file_path, 'a') as file:
                     file.write(text)
 
-    trainer_callbacks = [SampleTextCallback(model_manager.model, tokenization_manager.tokenizer, "/scratch/vgn2004/fine_tuning/standard_non_abrupt")]
+    trainer_callbacks = [SampleTextCallback(model_manager.model, tokenization_manager.tokenizer, "/scratch/vgn2004/fine_tuning/standard_slow_generate")]
     
     trainer = Trainer(
     model=model_manager.model,
@@ -175,14 +175,14 @@ if __name__ == "__main__":
         num_train_epochs=50,
         learning_rate=2e-4,
         logging_strategy=IntervalStrategy.STEPS,
-        logging_steps=200,
+        logging_steps=500,
         evaluation_strategy=IntervalStrategy.STEPS,
-        eval_steps=500,
+        eval_steps=1000,
         save_strategy=IntervalStrategy.STEPS,
         save_steps=1000,
         lr_scheduler_type="linear",
-        output_dir="/scratch/vgn2004/fine_tuning/standard_non_abrupt",
-        optim="paged_adamw_8bit"
+        output_dir="/scratch/vgn2004/fine_tuning/standard_slow_generate",
+        optim="paged_adamw_32bit"
     ),
     data_collator= DataCollatorForLanguageModeling(
     tokenizer=tokenization_manager.tokenizer,

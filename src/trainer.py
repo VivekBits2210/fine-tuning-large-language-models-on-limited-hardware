@@ -55,7 +55,7 @@ class Trainer:
         if self.train_config.is_quantized:
             logger.info("Picking quantized optimizer...")
             from bitsandbytes.optim import AdamW
-            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr, is_paged=True, optim_bits=8)
+            self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr, is_paged=True, optim_bits=32)
         else:
             from transformers import AdamW
             self.optimizer = AdamW(params=self.model_manager.model.parameters(), lr=self.train_config.lr)
