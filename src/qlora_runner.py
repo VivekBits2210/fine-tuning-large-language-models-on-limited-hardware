@@ -136,9 +136,7 @@ if __name__ == "__main__":
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(
-        tokenization_manager.tokenizer
-    )
+    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer)
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
