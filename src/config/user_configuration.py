@@ -11,14 +11,14 @@ class UserConfiguration:
 
         # Set the base directory depending on the OS
         if os.name == "posix":  # UNIX-like systems
-            base_dir = "/scratch"
+            self.base_dir = "/scratch"
         else:  # Windows (and potentially other OSs)
-            base_dir = "E:\\"
+            self.base_dir = "E:\\"
             # base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Ideally, default to D:\\ if USERPROFILE is not set
-        logger.info(f"The base directory is set to {base_dir}.")
+        logger.info(f"The base directory is set to {self.base_dir}.")
 
-        default_root_path = os.path.join(base_dir, self.net_id, "fine_tuning", self.env)
-        default_data_path = os.path.join(base_dir, self.net_id, "fine_tuning")
+        default_root_path = os.path.join(self.base_dir, self.net_id, "fine_tuning", self.env)
+        default_data_path = os.path.join(self.base_dir, self.net_id, "fine_tuning")
 
         self.root_path = kwargs.get("root_path", default_root_path)
         self.data_path = kwargs.get("data_path", default_data_path)

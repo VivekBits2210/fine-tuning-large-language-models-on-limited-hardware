@@ -14,26 +14,29 @@ from config import (
     TrainerConfiguration,
     LoraConfiguration,
     QuantizationConfiguration,
+    GodConfiguration,
 )
-from managers import OSEnvironmentManager
-from managers import PackagePathManager
-from managers import ModelManager
-from managers import SystemMonitor
-from managers import TokenizationManager
-from managers import DataManager
+from managers import (
+    OSEnvironmentManager,
+    PackagePathManager,
+    ModelManager,
+    SystemMonitor,
+    TokenizationManager,
+    DataManager,
+)
 from trainer import Trainer
+from utilities.db_utils import create_tables, store_god_configurations_if_not_exists, store_cared_configurations, \
+    generate_run_name
 
-# TODO: Every run has a set of configurations that is "cared" for. These are stored separatly while logging
-# TODO: Collate all configurations and store as 1 config. If the "cared" for config doesn't contain a config,
-#  default to the configuration in the collation
-# TODO: Only 2 config columns are needed - "cared" and "all"
-# Note: What defines a run? A concatenation of the cared configurations and their values
-# The name of the run should also be the name of the environment where the checkpoints are stored
-ENV = "qlora_simplified"
-MODEL_NAME = "facebook/opt-125m"
-DATASET_NAME = "NIH_ExPORTER_awarded_grant_text"
-TOKENIZER_NAME = "speedup"
-BATCH_SIZE = 64
+GOD_TAG = "god1"
+CARED_CONFIGURATIONS = {
+    "env": "qlora_simplified",
+    "model_name": "facebook/opt-125m",
+    "dataset_name": "NIH_ExPORTER_awarded_grant_text",
+    "tokenizer_name": "speedup",
+    "batch_size": 64
+}
+
 OS_ENV_DICT = {
     "CUDA_VISIBLE_DEVICES": 0,
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
@@ -46,14 +49,24 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
     gc.collect()
 
+    # Fetch god tag, used to store metrics
+    god_config = GodConfiguration(god_tag=GOD_TAG)
+
     # User configurations
     # Setup folder/file path related configurations
-    user_config = UserConfiguration(env=ENV)
+    user_config = UserConfiguration(env=CARED_CONFIGURATIONS["env"])
 
     # Logger setup
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     LogConfiguration.setup_logging(os.path.join(user_config.root_path, f"run_log_{timestamp}.log"))
     logger = logging.getLogger(__name__)
+
+    # Setup database
+    DB_PATH = os.path.join(user_config.base_dir, user_config.net_id, "metrics.sqlite3")
+    create_tables(DB_PATH)
+    store_god_configurations_if_not_exists(DB_PATH, GOD_TAG)
+    run_name = generate_run_name(CARED_CONFIGURATIONS)  # using the function from db_utils
+    logger.info(f"Starting run name {run_name}...")
 
     # Get initial RAM and GPU utilization
     monitor = SystemMonitor()
@@ -62,7 +75,8 @@ if __name__ == "__main__":
 
     # System and tokenizer configurations
     system_config = SystemConfiguration()
-    tokenizer_config = TokenizerConfiguration(tokenizer_name=TOKENIZER_NAME)
+    tokenizer_config = TokenizerConfiguration(tokenizer_name=CARED_CONFIGURATIONS["tokenizer_name"])
+    store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
 
     # Setup and commit torch configurations
     torch_config = TorchConfiguration()
@@ -78,11 +92,11 @@ if __name__ == "__main__":
 
     # Tokenization
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
-    tokenization_manager.load_for_model(MODEL_NAME)
+    tokenization_manager.load_for_model(CARED_CONFIGURATIONS["tokenizer_name"])
 
     # Data management and config
     data_manager = DataManager(user_config, system_config, tokenizer_config)
-    data_manager.dataset_name = DATASET_NAME
+    data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
     data_manager.set_data_collator(tokenization_manager.tokenizer)
 
     # Fetch dataset
@@ -94,9 +108,9 @@ if __name__ == "__main__":
     except FileNotFoundError as fe:
         logger.warning(f"{fe.__repr__()}")
         data_manager.create_dataset_from_jsonl_zst_file(
-            name=DATASET_NAME,
+            name=data_manager.dataset_name,
             jsonl_zst_file_path=os.path.join(
-                user_config.cache_path, f"{DATASET_NAME}.jsonl.zst"
+                user_config.cache_path, f"{data_manager.dataset_name}.jsonl.zst"
             ),
         )
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize)
@@ -110,7 +124,7 @@ if __name__ == "__main__":
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
-        batch_size=BATCH_SIZE,
+        batch_size=CARED_CONFIGURATIONS['batch_size'],
     )
 
     # Quantization
@@ -120,7 +134,7 @@ if __name__ == "__main__":
     # Transformer
     # TOASS: Was the model quantized?
     model_manager = ModelManager(system_config)
-    model_manager.load(MODEL_NAME, quantization_configuration=quantization_config)
+    model_manager.load(CARED_CONFIGURATIONS['model_name'], quantization_configuration=quantization_config)
 
     # LoRA
     # TOASS: Is the rest of the model frozen
@@ -150,5 +164,7 @@ if __name__ == "__main__":
         tokenization_manager=tokenization_manager,
         training_dataloader=training_dataloader,
         validation_dataloader=validation_dataloader,
+        database_path=DB_PATH,
+        run_name=run_name
     )
     trainer.train()

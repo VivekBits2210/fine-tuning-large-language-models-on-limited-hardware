@@ -2,6 +2,7 @@ import logging
 import os
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
+from utilities.db_utils import store_metric, store_checkpoint
 
 from config import (
     SystemConfiguration,
@@ -29,6 +30,8 @@ class Trainer:
         tokenization_manager: TokenizationManager,
         training_dataloader,
         validation_dataloader,
+        database_path,
+        run_name
     ):
         self.model_name = model_manager.model_name
         self.user_config = user_config
@@ -45,6 +48,9 @@ class Trainer:
         self.validation_dataloader = validation_dataloader
         self.num_batches = len(self.training_dataloader)
 
+        self.database_path = database_path
+        self.run_name = run_name
+
         self.log_path = None
         self.model_path = None
         self._setup_logging_and_saving()
@@ -59,6 +65,12 @@ class Trainer:
                 len(self.training_dataloader) * self.train_config.epochs
             ),
         )
+        lr_scheduler_details = {
+            "num_warmup_steps": self.train_config.num_warmup_steps,
+            "num_training_steps": len(self.training_dataloader) * self.train_config.epochs
+        }
+        store_metric(self.database_path, "lr_scheduler_details", self.run_name, lr_scheduler_details)
+
         self.running_loss = 0.0
 
     def _fetch_optimizer(self):
@@ -77,6 +89,11 @@ class Trainer:
             optimizer = AdamW(
                 params=self.model_manager.model.parameters(), lr=self.train_config.lr
             )
+        optimizer_detail = {
+            "optimizer_type": type(self.optimizer).__name__,
+            "learning_rate": self.train_config.lr
+        }
+        store_metric(self.database_path, "optimizer_details", self.run_name, optimizer_detail)
         return optimizer
 
     def _setup_logging_and_saving(self):
@@ -125,10 +142,18 @@ class Trainer:
 
         self.forward_backward_pass(batch)
 
+        training_loss_details = {
+            "epoch": epoch,
+            "batch_index": index,
+            "running_loss": self.running_loss
+        }
+        store_metric(self.database_path, "training_loss_details", self.run_name, training_loss_details)
+
     @measure_time_taken
     def save_checkpoint(self, epoch, index):
         logger.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
+        store_checkpoint(self.database_path, epoch, index, self.run_name, checkpointing_path)
         self.model_manager.model.save_pretrained(checkpointing_path)
         self.tokenization_manager.tokenizer.save_pretrained(checkpointing_path)
 
@@ -144,6 +169,12 @@ class Trainer:
         )
         with open(f"{self.log_path}/validation.log", "a") as f:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
+
+        metric_details = {
+            "avg_eval_loss": avg_eval_loss,
+            "perplexity": perplexity
+        }
+        store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
 
     def forward_backward_pass(self, batch):
         self.optimizer.zero_grad(set_to_none=True)

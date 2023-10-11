@@ -10,7 +10,7 @@ from config import (
     TokenizerConfiguration,
     TextGenConfiguration,
     SystemConfiguration,
-    TrainerConfiguration,
+    TrainerConfiguration, GodConfiguration,
 )
 
 from managers import (
@@ -52,6 +52,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Use the arguments
+GOD_TAG = "god1"
 NET_ID = args.net_id
 ENV = args.env
 NUM_WORKERS = args.num_workers
@@ -72,6 +73,9 @@ if __name__ == "__main__":
     # Clear the GPU
     torch.cuda.empty_cache()
     gc.collect()
+
+    # Fetch god tag, used to store metrics
+    god_config = GodConfiguration(god_tag=GOD_TAG)
 
     # Configure the logger, needed for initial utilization checks
     LogConfiguration.setup_logging()

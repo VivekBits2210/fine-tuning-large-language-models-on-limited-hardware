@@ -7,3 +7,4 @@ from .text_gen_configuration import TextGenConfiguration
 from .trainer_configuration import TrainerConfiguration
 from .lora_configuration import LoraConfiguration
 from .quantization_configuration import QuantizationConfiguration
+from .god_configuration import GodConfiguration
