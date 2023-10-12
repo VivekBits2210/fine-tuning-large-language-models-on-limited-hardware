@@ -25,6 +25,9 @@ class UserConfiguration:
         self.cache_path = kwargs.get(
             "tokenized_dataset_path", os.path.join(self.data_path, "datasets")
         )
+        
+        if not os.path.exists(self.root_path):
+            os.makedirs(self.root_path)
 
         self.tokenized_dataset_path_generator = (
             lambda dataset, tokenizer_name: os.path.join(

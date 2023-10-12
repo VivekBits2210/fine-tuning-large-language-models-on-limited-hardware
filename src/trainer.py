@@ -42,6 +42,7 @@ class Trainer:
         self.text_gen_config = text_gen_config
         self.train_config = train_config
 
+        self.system_monitor = system_monitor
         self.data_manager = data_manager
         self.model_manager = model_manager
         self.tokenization_manager = tokenization_manager
@@ -135,7 +136,7 @@ class Trainer:
             store_metric(self.database_path, "training_loss_details", self.run_name, training_loss_details)
             store_metric(self.database_path, "learning_rate", self.run_name, {"epoch": epoch, "index": index, "learning_rate": current_lr})
             store_metric(self.database_path, "gpu_utilization", self.run_name, 
-                     {"epoch": epoch, "index": index, "gpu_util": monitor.get_gpu_utilization(), "ram_usage": monitor.get_ram_usage()})
+                     {"epoch": epoch, "index": index, "gpu_util": self.system_monitor.get_gpu_utilization(), "ram_usage": self.system_monitor.get_ram_usage()})
 
         # Sample an output from the model, at each sampling interval
         if index % self.train_config.sampling_interval == 0:

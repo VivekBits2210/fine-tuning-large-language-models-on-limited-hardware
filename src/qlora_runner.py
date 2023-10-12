@@ -30,7 +30,7 @@ from utilities.db_utils import create_tables, store_god_configurations_if_not_ex
 
 GOD_TAG = "god1"
 CARED_CONFIGURATIONS = {
-    "env": "qlora_simplified",
+    "env": "qlora_instrumented",
     "model_name": "facebook/opt-125m",
     "dataset_name": "NIH_ExPORTER_awarded_grant_text",
     "tokenizer_name": "speedup",
