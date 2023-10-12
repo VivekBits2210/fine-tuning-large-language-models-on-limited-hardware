@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class UserConfiguration:
     def __init__(self, **kwargs):
-        self.env = kwargs.get("env")
+        self.env = kwargs.get("env", "default")
         self.net_id = kwargs.get("net_id", "vgn2004")
 
         # Set the base directory depending on the OS

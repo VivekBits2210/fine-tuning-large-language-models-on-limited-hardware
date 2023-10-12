@@ -1,3 +1,4 @@
+import time
 import logging
 import os
 from tqdm import tqdm
@@ -11,7 +12,7 @@ from config import (
     TrainerConfiguration,
     TextGenConfiguration,
 )
-from managers import DataManager, ModelManager, TokenizationManager
+from managers import DataManager, ModelManager, TokenizationManager, SystemMonitor
 from utilities.profiler_utils import measure_time_taken
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class Trainer:
         tokenizer_config: TokenizerConfiguration,
         text_gen_config: TextGenConfiguration,
         train_config: TrainerConfiguration,
+        system_monitor: SystemMonitor,
         data_manager: DataManager,
         model_manager: ModelManager,
         tokenization_manager: TokenizationManager,
@@ -90,9 +92,8 @@ class Trainer:
                 params=self.model_manager.model.parameters(), lr=self.train_config.lr
             )
         optimizer_detail = {
-            "optimizer_type": type(self.optimizer).__name__,
-            "learning_rate": self.train_config.lr
-        }
+            "optimizer_type": type(optimizer).__name__,
+            }
         store_metric(self.database_path, "optimizer_details", self.run_name, optimizer_detail)
         return optimizer
 
@@ -122,6 +123,20 @@ class Trainer:
 
     def handle_batch(self, epoch, index, batch):
         self.model_manager.model.train()
+        
+        current_lr = self.optimizer.param_groups[0]['lr']
+        
+        if index % 100 == 0:
+            training_loss_details = {
+                "epoch": epoch,
+                "index": index,
+                "running_loss": self.running_loss/index
+            }
+            store_metric(self.database_path, "training_loss_details", self.run_name, training_loss_details)
+            store_metric(self.database_path, "learning_rate", self.run_name, {"epoch": epoch, "index": index, "learning_rate": current_lr})
+            store_metric(self.database_path, "gpu_utilization", self.run_name, 
+                     {"epoch": epoch, "index": index, "gpu_util": monitor.get_gpu_utilization(), "ram_usage": monitor.get_ram_usage()})
+
         # Sample an output from the model, at each sampling interval
         if index % self.train_config.sampling_interval == 0:
             prompt = self.tokenization_manager.encode("This")
@@ -131,6 +146,9 @@ class Trainer:
             logger.info(f"Text:\n{text}")
             with open(f"{self.log_path}/training.log", "a") as f:
                 f.write(f"{epoch}\t{index}\t{self.running_loss/index}\t{text}\n")
+            
+            store_metric(self.database_path, "generated_text", self.run_name, 
+                 {"epoch": epoch, "index": index, "text": text})
 
         # Save the model at each checkpointing interval
         if index % self.train_config.checkpointing_interval == 0:
@@ -142,18 +160,11 @@ class Trainer:
 
         self.forward_backward_pass(batch)
 
-        training_loss_details = {
-            "epoch": epoch,
-            "batch_index": index,
-            "running_loss": self.running_loss
-        }
-        store_metric(self.database_path, "training_loss_details", self.run_name, training_loss_details)
-
     @measure_time_taken
     def save_checkpoint(self, epoch, index):
         logger.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
-        store_checkpoint(self.database_path, epoch, index, self.run_name, checkpointing_path)
+        store_checkpoint(self.database_path, epoch + ((1.0*index)/len(self.training_dataloader)), self.run_name, checkpointing_path)
         self.model_manager.model.save_pretrained(checkpointing_path)
         self.tokenization_manager.tokenizer.save_pretrained(checkpointing_path)
 
@@ -171,7 +182,9 @@ class Trainer:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
 
         metric_details = {
-            "avg_eval_loss": avg_eval_loss,
+            "epoch": epoch,
+            "index": index,
+            "eval_loss": avg_eval_loss,
             "perplexity": perplexity
         }
         store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
@@ -190,19 +203,31 @@ class Trainer:
         self.lr_scheduler.step()
 
     def train(self):
+        start_time = time.time()
+        
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
+            epoch_start_time = time.time()
             for index, batch in tqdm(
                 enumerate(self.training_dataloader, 1),
                 total=len(self.training_dataloader),
             ):
                 self.handle_batch(epoch, index, batch)
+            
+            epoch_end_time = time.time()
+            epoch_time = epoch_end_time - epoch_start_time
+            store_metric(self.database_path, "epoch_time", self.run_name, 
+                 {"epoch": epoch, "time": epoch_time})
 
             logger.info(f"Training Loss after Epoch {epoch}: {self.running_loss / self.num_batches}")
 
-        logger.info(f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
+        end_time = time.time()
+        total_time = end_time - start_time
+        store_metric(self.database_path, "total_time", self.run_name, {"total_time": total_time})
 
+        logger.info(f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
+        store_checkpoint(self.database_path, self.train_config.epochs+1, self.run_name, checkpointing_path)
         self.model_manager.model.save_pretrained(self.model_path)
         self.tokenization_manager.tokenizer.save_pretrained(self.model_path)

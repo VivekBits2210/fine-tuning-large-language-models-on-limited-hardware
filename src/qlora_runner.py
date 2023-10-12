@@ -61,23 +61,12 @@ if __name__ == "__main__":
     LogConfiguration.setup_logging(os.path.join(user_config.root_path, f"run_log_{timestamp}.log"))
     logger = logging.getLogger(__name__)
 
-    # Setup database
-    DB_PATH = os.path.join(user_config.base_dir, user_config.net_id, "metrics.sqlite3")
-    create_tables(DB_PATH)
-    store_god_configurations_if_not_exists(DB_PATH, GOD_TAG)
-    run_name = generate_run_name(CARED_CONFIGURATIONS)  # using the function from db_utils
-    logger.info(f"Starting run name {run_name}...")
-
     # Get initial RAM and GPU utilization
     monitor = SystemMonitor()
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
 
-    # System and tokenizer configurations
-    system_config = SystemConfiguration()
-    tokenizer_config = TokenizerConfiguration(tokenizer_name=CARED_CONFIGURATIONS["tokenizer_name"])
-    store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
-
+    
     # Setup and commit torch configurations
     torch_config = TorchConfiguration()
     torch_config.commit()
@@ -90,10 +79,24 @@ if __name__ == "__main__":
     os_env_manager = OSEnvironmentManager()
     os_env_manager.update_from_dict(OS_ENV_DICT)
 
+
+    # System and tokenizer configurations
+    system_config = SystemConfiguration()
+    tokenizer_config = TokenizerConfiguration(tokenizer_name=CARED_CONFIGURATIONS["tokenizer_name"])
+    
     # Tokenization
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
-    tokenization_manager.load_for_model(CARED_CONFIGURATIONS["tokenizer_name"])
+    tokenization_manager.load_for_model(CARED_CONFIGURATIONS["model_name"])
 
+    # Setup database
+    DB_PATH = os.path.join(user_config.base_dir, user_config.net_id, "metrics.sqlite3")
+    create_tables(DB_PATH)
+    store_god_configurations_if_not_exists(DB_PATH, GOD_TAG, tokenization_manager.tokenizer)
+    run_name = generate_run_name(CARED_CONFIGURATIONS)  # using the function from db_utils
+    logger.info(f"Starting run name {run_name}...")
+    store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
+
+    
     # Data management and config
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
@@ -159,6 +162,7 @@ if __name__ == "__main__":
         tokenizer_config=tokenizer_config,
         text_gen_config=text_gen_config,
         train_config=train_config,
+        system_monitor=monitor,
         data_manager=data_manager,
         model_manager=model_manager,
         tokenization_manager=tokenization_manager,
