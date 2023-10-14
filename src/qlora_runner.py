@@ -1,5 +1,7 @@
+import argparse
 import logging
 import gc
+import json
 import os
 import datetime
 import torch
@@ -29,18 +31,6 @@ from utilities.db_utils import create_tables, store_god_configurations_if_not_ex
     generate_run_name
 
 GOD_TAG = "god1"
-CARED_CONFIGURATIONS = {
-    "user_config": {
-        "env": "qlora_instrumented",
-    },
-    "tokenizer_config": {
-        "tokenizer_name": "speedup",
-    },
-    "model_name": "facebook/opt-125m",
-    "dataset_name": "NIH_ExPORTER_awarded_grant_text",
-    "batch_size": 64
-}
-
 OS_ENV_DICT = {
     "CUDA_VISIBLE_DEVICES": 0,
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
@@ -49,6 +39,15 @@ OS_ENV_DICT = {
 }
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Your script description')
+    parser.add_argument('--config_path', type=str, required=True,
+                        help='Path to the JSON file containing CARED_CONFIGURATIONS')
+
+    args = parser.parse_args()
+
+    with open(args.config_path, 'r') as f:
+        CARED_CONFIGURATIONS = json.load(f)
+
     # Clear the GPU
     torch.cuda.empty_cache()
     gc.collect()

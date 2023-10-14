@@ -1,0 +1,11 @@
+{
+    "user_config": {
+        "env": "qlora_instrumented"
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "speedup"
+    },
+    "model_name": "facebook/opt-125m",
+    "dataset_name": "NIH_ExPORTER_awarded_grant_text",
+    "batch_size": 64
+}
