@@ -5,6 +5,7 @@ import json
 import os
 import datetime
 import torch
+import wandb
 
 from config import (
     UserConfiguration,
@@ -39,14 +40,16 @@ OS_ENV_DICT = {
 }
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Your script description')
-    parser.add_argument('--config_path', type=str, required=True,
-                        help='Path to the JSON file containing CARED_CONFIGURATIONS')
+    # parser = argparse.ArgumentParser(description='Your script description')
+    # parser.add_argument('--config_path', type=str, required=True,
+    #                     help='Path to the JSON file containing CARED_CONFIGURATIONS')
+    #
+    # args = parser.parse_args()
+    # with open(args.config_path, 'r') as f:
+    #     CARED_CONFIGURATIONS = json.load(f)
 
-    args = parser.parse_args()
-
-    with open(args.config_path, 'r') as f:
-        CARED_CONFIGURATIONS = json.load(f)
+    wandb.init(project='qlora_finetuning')
+    CARED_CONFIGURATIONS = {k: v for k, v in wandb.config.as_dict().items()}
 
     # Clear the GPU
     torch.cuda.empty_cache()
@@ -63,6 +66,9 @@ if __name__ == "__main__":
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     LogConfiguration.setup_logging(os.path.join(user_config.root_path, f"run_log_{timestamp}.log"))
     logger = logging.getLogger(__name__)
+
+    # Describe configs used
+    logger.info(f"Setting CARED_CONFIGURATIONS as {CARED_CONFIGURATIONS}")
 
     # Get initial RAM and GPU utilization
     monitor = SystemMonitor()
