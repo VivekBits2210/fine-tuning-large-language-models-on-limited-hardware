@@ -229,6 +229,6 @@ class Trainer:
         store_metric(self.database_path, "total_time", self.run_name, {"total_time": total_time})
 
         logger.info(f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
-        store_checkpoint(self.database_path, self.train_config.epochs+1, self.run_name, checkpointing_path)
+        store_checkpoint(self.database_path, self.train_config.epochs+1, self.run_name, self.model_path)
         self.model_manager.model.save_pretrained(self.model_path)
         self.tokenization_manager.tokenizer.save_pretrained(self.model_path)
