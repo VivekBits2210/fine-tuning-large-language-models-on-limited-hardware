@@ -7,6 +7,14 @@ from config import UserConfiguration, TextGenConfiguration, TorchConfiguration, 
     SystemConfiguration, TrainerConfiguration, QuantizationConfiguration, LoraConfiguration
 
 
+def flatten_dict(d):
+    """Flatten a nested dictionary and concatenate nested keys."""
+    items = []
+    for k, v in d.items():
+        items.extend(flatten_dict(v).items()) if isinstance(v, dict) else items.append((k, v))
+    return dict(items)
+
+
 def create_tables(db_path):
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
@@ -22,7 +30,7 @@ def create_tables(db_path):
         )
     ''')
 
-# 2. Runs Table
+    # 2. Runs Table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Runs (
         RUN_NAME TEXT PRIMARY KEY,
@@ -114,7 +122,9 @@ def store_god_configurations_if_not_exists(db_path, god_tag, tokenizer):
 
 def generate_run_name(cared_configurations):
     """Generate an aesthetic run name by concatenating the key-value pairs."""
-    return "|".join([f"{key}-{value}" for key, value in cared_configurations.items()])
+    flat_config = flatten_dict(cared_configurations)
+    sorted_config = sorted(flat_config.items(), key=lambda kv: kv[0])
+    return "|".join([f"{key}-{value}" for key, value in sorted_config])
 
 
 def store_cared_configurations(db_path, god_tag, cared_configurations):
@@ -150,7 +160,9 @@ def store_metric(db_path, metric_tag, run_name, metric_details):
 
     # Current timestamp
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    logging.info(f"DB_PATH {db_path}, metric_tag {metric_tag}, run_name {run_name}, metric_details {metric_details}, timestamp {timestamp}")
+    logging.info(
+        f"DB_PATH {db_path}, metric_tag {metric_tag}, run_name {run_name}, metric_details {metric_details}, "
+        f"timestamp {timestamp}")
 
     # Convert the metric details (assuming it's a dictionary) to a JSON string
     metric_json = json.dumps(metric_details)
@@ -182,4 +194,3 @@ def store_checkpoint(db_path, epoch, run_name, path):
     conn.commit()
 
     conn.close()
-

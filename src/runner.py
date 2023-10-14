@@ -22,7 +22,6 @@ from managers import (
     DataManager,
 )
 
-# TODO: These should be picked up from command line
 from trainer import Trainer
 
 # Argument parser setup

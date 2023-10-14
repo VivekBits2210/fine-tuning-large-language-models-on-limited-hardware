@@ -30,10 +30,14 @@ from utilities.db_utils import create_tables, store_god_configurations_if_not_ex
 
 GOD_TAG = "god1"
 CARED_CONFIGURATIONS = {
-    "env": "qlora_instrumented",
+    "user_config": {
+        "env": "qlora_instrumented",
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "speedup",
+    },
     "model_name": "facebook/opt-125m",
     "dataset_name": "NIH_ExPORTER_awarded_grant_text",
-    "tokenizer_name": "speedup",
     "batch_size": 64
 }
 
@@ -54,7 +58,7 @@ if __name__ == "__main__":
 
     # User configurations
     # Setup folder/file path related configurations
-    user_config = UserConfiguration(env=CARED_CONFIGURATIONS["env"])
+    user_config = UserConfiguration(**CARED_CONFIGURATIONS.get("user_config", {}))
 
     # Logger setup
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -66,9 +70,8 @@ if __name__ == "__main__":
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
 
-    
     # Setup and commit torch configurations
-    torch_config = TorchConfiguration()
+    torch_config = TorchConfiguration(**CARED_CONFIGURATIONS.get("torch_config", {}))
     torch_config.commit()
 
     # Add Python packages to sys path
@@ -79,10 +82,9 @@ if __name__ == "__main__":
     os_env_manager = OSEnvironmentManager()
     os_env_manager.update_from_dict(OS_ENV_DICT)
 
-
     # System and tokenizer configurations
-    system_config = SystemConfiguration()
-    tokenizer_config = TokenizerConfiguration(tokenizer_name=CARED_CONFIGURATIONS["tokenizer_name"])
+    system_config = SystemConfiguration(**CARED_CONFIGURATIONS.get("system_config", {}))
+    tokenizer_config = TokenizerConfiguration(**CARED_CONFIGURATIONS.get("tokenizer_config", {}))
     
     # Tokenization
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
@@ -96,7 +98,6 @@ if __name__ == "__main__":
     logger.info(f"Starting run name {run_name}...")
     store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
 
-    
     # Data management and config
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
@@ -132,7 +133,7 @@ if __name__ == "__main__":
 
     # Quantization
     # TOASS: Is bfloat available?
-    quantization_config = QuantizationConfiguration()
+    quantization_config = QuantizationConfiguration(**CARED_CONFIGURATIONS.get("quantization_config", {}))
 
     # Transformer
     # TOASS: Was the model quantized?
@@ -143,19 +144,20 @@ if __name__ == "__main__":
     # TOASS: Is the rest of the model frozen
     # TOASS: Are the lora weights quantized?
     # TOASS: Are the lora weights updating during fine-tuning?
-    lora_configuration = LoraConfiguration()
+    lora_configuration = LoraConfiguration(**CARED_CONFIGURATIONS.get("lora_config", {}))
     model_manager.lorify(lora_configuration, module_style="qlora")
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer)
+    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, **CARED_CONFIGURATIONS.get("text_gen_config",
+                                                                                                      {}))
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
     logging.info(f"Generated Text Before Fine-Tuning:\n{text}")
 
     # Training
-    train_config = TrainerConfiguration()
+    train_config = TrainerConfiguration(**CARED_CONFIGURATIONS.get("train_config", {}))
     trainer = Trainer(
         user_config=user_config,
         system_config=system_config,
