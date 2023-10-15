@@ -40,16 +40,19 @@ OS_ENV_DICT = {
 }
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser(description='Your script description')
-    # parser.add_argument('--config_path', type=str, required=True,
-    #                     help='Path to the JSON file containing CARED_CONFIGURATIONS')
-    #
-    # args = parser.parse_args()
-    # with open(args.config_path, 'r') as f:
-    #     CARED_CONFIGURATIONS = json.load(f)
+    parser = argparse.ArgumentParser(description='Your script description')
+    parser.add_argument('--config_path', type=str, required=False, default="wandb",
+                        help='Path to the JSON file containing CARED_CONFIGURATIONS')
 
-    wandb.init(project='qlora_finetuning')
-    CARED_CONFIGURATIONS = {k: v for k, v in wandb.config.as_dict().items()}
+    args = parser.parse_args()
+    if args.config_path.endswith(".json"):
+        with open(args.config_path, 'r') as f:
+            CARED_CONFIGURATIONS = json.load(f)
+    elif args.config_path == "wandb":
+        wandb.init(project='qlora_finetuning')
+        CARED_CONFIGURATIONS = {k: v for k, v in wandb.config.as_dict().items()}
+    else:
+        raise Exception("Expected json configuration")
 
     # Clear the GPU
     torch.cuda.empty_cache()
