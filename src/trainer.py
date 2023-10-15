@@ -244,7 +244,6 @@ class Trainer:
             wandb.log(metric_details)
 
     def forward_backward_pass(self, batch):
-        self.optimizer.zero_grad(set_to_none=True)
         batch = {
             k: v.pin_memory().to(self.model_manager.device, non_blocking=True)
             for k, v in batch.items()
@@ -255,6 +254,7 @@ class Trainer:
         loss.backward()
         self.optimizer.step()
         self.lr_scheduler.step()
+        self.optimizer.zero_grad()
 
     def train(self):
         start_time = time.time()
