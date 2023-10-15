@@ -93,7 +93,7 @@ if __name__ == "__main__":
     # System and tokenizer configurations
     system_config = SystemConfiguration(**CARED_CONFIGURATIONS.get("system_config", {}))
     tokenizer_config = TokenizerConfiguration(**CARED_CONFIGURATIONS.get("tokenizer_config", {}))
-    
+
     # Tokenization
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
     tokenization_manager.load_for_model(CARED_CONFIGURATIONS["model_name"])
@@ -179,6 +179,7 @@ if __name__ == "__main__":
         training_dataloader=training_dataloader,
         validation_dataloader=validation_dataloader,
         database_path=DB_PATH,
-        run_name=run_name
+        run_name=run_name,
+        use_wandb=args.config_path == "wandb"
     )
     trainer.train()

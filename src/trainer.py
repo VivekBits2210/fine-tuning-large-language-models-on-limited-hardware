@@ -1,6 +1,7 @@
 import time
 import logging
 import os
+import wandb
 from tqdm import tqdm
 from transformers import get_linear_schedule_with_warmup
 from utilities.db_utils import store_metric, store_checkpoint
@@ -20,20 +21,21 @@ logger = logging.getLogger(__name__)
 
 class Trainer:
     def __init__(
-        self,
-        user_config: UserConfiguration,
-        system_config: SystemConfiguration,
-        tokenizer_config: TokenizerConfiguration,
-        text_gen_config: TextGenConfiguration,
-        train_config: TrainerConfiguration,
-        system_monitor: SystemMonitor,
-        data_manager: DataManager,
-        model_manager: ModelManager,
-        tokenization_manager: TokenizationManager,
-        training_dataloader,
-        validation_dataloader,
-        database_path,
-        run_name
+            self,
+            user_config: UserConfiguration,
+            system_config: SystemConfiguration,
+            tokenizer_config: TokenizerConfiguration,
+            text_gen_config: TextGenConfiguration,
+            train_config: TrainerConfiguration,
+            system_monitor: SystemMonitor,
+            data_manager: DataManager,
+            model_manager: ModelManager,
+            tokenization_manager: TokenizationManager,
+            training_dataloader,
+            validation_dataloader,
+            database_path,
+            run_name,
+            use_wandb=False
     ):
         self.model_name = model_manager.model_name
         self.user_config = user_config
@@ -65,16 +67,19 @@ class Trainer:
             optimizer=self.optimizer,
             num_warmup_steps=self.train_config.num_warmup_steps,
             num_training_steps=(
-                len(self.training_dataloader) * self.train_config.epochs
+                    len(self.training_dataloader) * self.train_config.epochs
             ),
         )
         lr_scheduler_details = {
             "num_warmup_steps": self.train_config.num_warmup_steps,
             "num_training_steps": len(self.training_dataloader) * self.train_config.epochs
         }
-        store_metric(self.database_path, "lr_scheduler_details", self.run_name, lr_scheduler_details)
 
         self.running_loss = 0.0
+        self.use_wandb = use_wandb
+        store_metric(self.database_path, "lr_scheduler_details", self.run_name, lr_scheduler_details)
+        if self.use_wandb:
+            wandb.log(lr_scheduler_details)
 
     def _fetch_optimizer(self):
         if self.model_manager.is_quantized:
@@ -94,8 +99,10 @@ class Trainer:
             )
         optimizer_detail = {
             "optimizer_type": type(optimizer).__name__,
-            }
+        }
         store_metric(self.database_path, "optimizer_details", self.run_name, optimizer_detail)
+        if self.use_wandb:
+            wandb.log(optimizer_detail)
         return optimizer
 
     def _setup_logging_and_saving(self):
@@ -124,32 +131,49 @@ class Trainer:
 
     def handle_batch(self, epoch, index, batch):
         self.model_manager.model.train()
-        
+
         current_lr = self.optimizer.param_groups[0]['lr']
-        
+
         if index % 100 == 0:
             training_loss_details = {
                 "epoch": epoch,
                 "index": index,
-                "running_loss": self.running_loss/index
+                "running_loss": self.running_loss / index
+            }
+            learning_rate_details = {
+                "epoch": epoch,
+                "index": index,
+                "learning_rate": current_lr
+            }
+            gpu_details = {
+                "epoch": epoch,
+                "index": index,
+                "gpu_util": self.system_monitor.get_gpu_utilization(),
+                "ram_usage": self.system_monitor.get_ram_usage()
             }
             store_metric(self.database_path, "training_loss_details", self.run_name, training_loss_details)
-            store_metric(self.database_path, "learning_rate", self.run_name, {"epoch": epoch, "index": index, "learning_rate": current_lr})
-            store_metric(self.database_path, "gpu_utilization", self.run_name, 
-                     {"epoch": epoch, "index": index, "gpu_util": self.system_monitor.get_gpu_utilization(), "ram_usage": self.system_monitor.get_ram_usage()})
+            store_metric(self.database_path, "learning_rate", self.run_name, learning_rate_details)
+            store_metric(self.database_path, "gpu_utilization", self.run_name, gpu_details)
+
+            if self.use_wandb:
+                wandb.log(training_loss_details)
+                wandb.log(learning_rate_details)
+                wandb.log(gpu_details)
 
         # Sample an output from the model, at each sampling interval
         if index % self.train_config.sampling_interval == 0:
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
             text = self.tokenization_manager.decode(sequence, self.text_gen_config)
-            logger.info(f"Training: Epoch-{epoch} Index-{index} Loss-{self.running_loss/index}")
+            logger.info(f"Training: Epoch-{epoch} Index-{index} Loss-{self.running_loss / index}")
             logger.info(f"Text:\n{text}")
             with open(f"{self.log_path}/training.log", "a") as f:
-                f.write(f"{epoch}\t{index}\t{self.running_loss/index}\t{text}\n")
-            
-            store_metric(self.database_path, "generated_text", self.run_name, 
-                 {"epoch": epoch, "index": index, "text": text})
+                f.write(f"{epoch}\t{index}\t{self.running_loss / index}\t{text}\n")
+
+            text_gen_details = {"epoch": epoch, "index": index, "text": text}
+            store_metric(self.database_path, "generated_text", self.run_name, text_gen_details)
+            if self.use_wandb:
+                wandb.log(text_gen_details)
 
         # Save the model at each checkpointing interval
         if index % self.train_config.checkpointing_interval == 0:
@@ -165,7 +189,8 @@ class Trainer:
     def save_checkpoint(self, epoch, index):
         logger.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
-        store_checkpoint(self.database_path, epoch + ((1.0*index)/len(self.training_dataloader)), self.run_name, checkpointing_path)
+        store_checkpoint(self.database_path, epoch + ((1.0 * index) / len(self.training_dataloader)), self.run_name,
+                         checkpointing_path)
         self.model_manager.model.save_pretrained(checkpointing_path)
         self.tokenization_manager.tokenizer.save_pretrained(checkpointing_path)
 
@@ -189,6 +214,8 @@ class Trainer:
             "perplexity": perplexity
         }
         store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
+        if self.use_wandb:
+            wandb.log(metric_details)
 
     def forward_backward_pass(self, batch):
         self.optimizer.zero_grad(set_to_none=True)
@@ -205,30 +232,36 @@ class Trainer:
 
     def train(self):
         start_time = time.time()
-        
+
         for epoch in tqdm(range(1, self.train_config.epochs + 1)):
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
             epoch_start_time = time.time()
             for index, batch in tqdm(
-                enumerate(self.training_dataloader, 1),
-                total=len(self.training_dataloader),
+                    enumerate(self.training_dataloader, 1),
+                    total=len(self.training_dataloader),
             ):
                 self.handle_batch(epoch, index, batch)
-            
+
             epoch_end_time = time.time()
             epoch_time = epoch_end_time - epoch_start_time
-            store_metric(self.database_path, "epoch_time", self.run_name, 
-                 {"epoch": epoch, "time": epoch_time})
+            epoch_dict = {"epoch": epoch, "time": epoch_time}
+            store_metric(self.database_path, "epoch_time", self.run_name, epoch_dict)
+            if self.use_wandb:
+                wandb.log(epoch_dict)
 
             logger.info(f"Training Loss after Epoch {epoch}: {self.running_loss / self.num_batches}")
 
         end_time = time.time()
         total_time = end_time - start_time
-        store_metric(self.database_path, "total_time", self.run_name, {"total_time": total_time})
+        total_time_dict = {"total_time": total_time}
+        store_metric(self.database_path, "total_time", self.run_name, total_time_dict)
+        if self.use_wandb:
+            wandb.log(total_time_dict)
 
-        logger.info(f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
-        store_checkpoint(self.database_path, self.train_config.epochs+1, self.run_name, self.model_path)
+        logger.info(
+            f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}")
+        store_checkpoint(self.database_path, self.train_config.epochs + 1, self.run_name, self.model_path)
         self.model_manager.model.save_pretrained(self.model_path)
         self.tokenization_manager.tokenizer.save_pretrained(self.model_path)

@@ -3,8 +3,6 @@ import datetime
 import sqlite3
 import logging
 
-import wandb
-
 from config import UserConfiguration, TextGenConfiguration, TorchConfiguration, TokenizerConfiguration, \
     SystemConfiguration, TrainerConfiguration, QuantizationConfiguration, LoraConfiguration
 
@@ -156,10 +154,6 @@ def store_cared_configurations(db_path, god_tag, cared_configurations):
 
 def store_metric(db_path, metric_tag, run_name, metric_details):
     """Store a metric entry in the Metrics table."""
-    # Log using Wandb
-    wandb.log(metric_details)
-
-
     # Connect to the SQLite database
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
