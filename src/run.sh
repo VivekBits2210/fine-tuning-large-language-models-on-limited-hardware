@@ -20,4 +20,4 @@ if [ "$#" -ne 1 ]; then
 fi
 
 CONFIG_NAME=$1
-python qlora_runner.py --config_path ./run_configurationn/{CONFIG_NAME}.json
+python qlora_runner.py --config_path ./run_configurations/{CONFIG_NAME}.json
