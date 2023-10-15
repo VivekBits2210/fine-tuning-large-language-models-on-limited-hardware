@@ -37,6 +37,7 @@ class Trainer:
         run_name,
         use_wandb=False,
     ):
+        self.use_wandb = use_wandb
         self.model_name = model_manager.model_name
         self.user_config = user_config
         self.system_config = system_config
@@ -77,7 +78,6 @@ class Trainer:
         }
 
         self.running_loss = 0.0
-        self.use_wandb = use_wandb
         store_metric(
             self.database_path,
             "lr_scheduler_details",
