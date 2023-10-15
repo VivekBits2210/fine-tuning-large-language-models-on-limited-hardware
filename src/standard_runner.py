@@ -9,7 +9,8 @@ from config import (
     TokenizerConfiguration,
     TextGenConfiguration,
     SystemConfiguration,
-    LoraConfiguration, QuantizationConfiguration,
+    LoraConfiguration,
+    QuantizationConfiguration,
 )
 
 from managers import (
@@ -117,17 +118,13 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE,
     )
 
-
     # Quantization
     # TOASS: Is bfloat available?
     quantization_config = QuantizationConfiguration()
 
     # Model
     model_manager = ModelManager(system_config)
-    model_manager.load(
-        MODEL_NAME,
-        quantization_configuration=quantization_config
-    )
+    model_manager.load(MODEL_NAME, quantization_configuration=quantization_config)
 
     logger.info(model_manager.model)
 

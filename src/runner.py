@@ -10,7 +10,8 @@ from config import (
     TokenizerConfiguration,
     TextGenConfiguration,
     SystemConfiguration,
-    TrainerConfiguration, GodConfiguration,
+    TrainerConfiguration,
+    GodConfiguration,
 )
 
 from managers import (

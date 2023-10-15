@@ -62,7 +62,9 @@ class ModelManager:
             target_modules=self._find_lora_target_modules(module_style),
         )
         self.model = get_peft_model(self.model, lora_config)
-        logger.info(f"Addling low-rank adapters to model with config as {self.model.peft_config}")
+        logger.info(
+            f"Addling low-rank adapters to model with config as {self.model.peft_config}"
+        )
 
     def __augment_model(self):
         #         self.model.gradient_checkpointing_enable()

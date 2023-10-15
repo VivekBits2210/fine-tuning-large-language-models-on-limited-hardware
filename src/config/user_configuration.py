@@ -17,7 +17,9 @@ class UserConfiguration:
             # base_dir = os.environ.get('USERPROFILE', 'D:\\')  # Ideally, default to D:\\ if USERPROFILE is not set
         logger.info(f"The base directory is set to {self.base_dir}.")
 
-        default_root_path = os.path.join(self.base_dir, self.net_id, "fine_tuning", self.env)
+        default_root_path = os.path.join(
+            self.base_dir, self.net_id, "fine_tuning", self.env
+        )
         default_data_path = os.path.join(self.base_dir, self.net_id, "fine_tuning")
 
         self.root_path = kwargs.get("root_path", default_root_path)
@@ -25,7 +27,7 @@ class UserConfiguration:
         self.cache_path = kwargs.get(
             "tokenized_dataset_path", os.path.join(self.data_path, "datasets")
         )
-        
+
         if not os.path.exists(self.root_path):
             os.makedirs(self.root_path)
 

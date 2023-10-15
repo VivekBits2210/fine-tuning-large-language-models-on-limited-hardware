@@ -28,8 +28,12 @@ from managers import (
     DataManager,
 )
 from trainer import Trainer
-from utilities.db_utils import create_tables, store_god_configurations_if_not_exists, store_cared_configurations, \
-    generate_run_name
+from utilities.db_utils import (
+    create_tables,
+    store_god_configurations_if_not_exists,
+    store_cared_configurations,
+    generate_run_name,
+)
 
 GOD_TAG = "god1"
 OS_ENV_DICT = {
@@ -40,16 +44,21 @@ OS_ENV_DICT = {
 }
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Your script description')
-    parser.add_argument('--config_path', type=str, required=False, default="wandb",
-                        help='Path to the JSON file containing CARED_CONFIGURATIONS')
+    parser = argparse.ArgumentParser(description="Your script description")
+    parser.add_argument(
+        "--config_path",
+        type=str,
+        required=False,
+        default="wandb",
+        help="Path to the JSON file containing CARED_CONFIGURATIONS",
+    )
 
     args = parser.parse_args()
     if args.config_path.endswith(".json"):
-        with open(args.config_path, 'r') as f:
+        with open(args.config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
     elif args.config_path == "wandb":
-        wandb.init(project='qlora_finetuning')
+        wandb.init(project="qlora_finetuning")
         CARED_CONFIGURATIONS = {k: v for k, v in wandb.config.as_dict().items()}
     else:
         raise Exception("Expected json configuration")
@@ -66,8 +75,10 @@ if __name__ == "__main__":
     user_config = UserConfiguration(**CARED_CONFIGURATIONS.get("user_config", {}))
 
     # Logger setup
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    LogConfiguration.setup_logging(os.path.join(user_config.root_path, f"run_log_{timestamp}.log"))
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    LogConfiguration.setup_logging(
+        os.path.join(user_config.root_path, f"run_log_{timestamp}.log")
+    )
     logger = logging.getLogger(__name__)
 
     # Describe configs used
@@ -92,7 +103,9 @@ if __name__ == "__main__":
 
     # System and tokenizer configurations
     system_config = SystemConfiguration(**CARED_CONFIGURATIONS.get("system_config", {}))
-    tokenizer_config = TokenizerConfiguration(**CARED_CONFIGURATIONS.get("tokenizer_config", {}))
+    tokenizer_config = TokenizerConfiguration(
+        **CARED_CONFIGURATIONS.get("tokenizer_config", {})
+    )
 
     # Tokenization
     tokenization_manager = TokenizationManager(user_config, tokenizer_config)
@@ -101,8 +114,12 @@ if __name__ == "__main__":
     # Setup database
     DB_PATH = os.path.join(user_config.base_dir, user_config.net_id, "metrics.sqlite3")
     create_tables(DB_PATH)
-    store_god_configurations_if_not_exists(DB_PATH, GOD_TAG, tokenization_manager.tokenizer)
-    run_name = generate_run_name(CARED_CONFIGURATIONS)  # using the function from db_utils
+    store_god_configurations_if_not_exists(
+        DB_PATH, GOD_TAG, tokenization_manager.tokenizer
+    )
+    run_name = generate_run_name(
+        CARED_CONFIGURATIONS
+    )  # using the function from db_utils
     logger.info(f"Starting run name {run_name}...")
     store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
 
@@ -136,29 +153,38 @@ if __name__ == "__main__":
     training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
         training_dataset=training_dataset,
         validation_dataset=validation_dataset,
-        batch_size=CARED_CONFIGURATIONS['batch_size'],
+        batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
 
     # Quantization
     # TOASS: Is bfloat available?
-    quantization_config = QuantizationConfiguration(**CARED_CONFIGURATIONS.get("quantization_config", {}))
+    quantization_config = QuantizationConfiguration(
+        **CARED_CONFIGURATIONS.get("quantization_config", {})
+    )
 
     # Transformer
     # TOASS: Was the model quantized?
     model_manager = ModelManager(system_config)
-    model_manager.load(CARED_CONFIGURATIONS['model_name'], quantization_configuration=quantization_config)
+    model_manager.load(
+        CARED_CONFIGURATIONS["model_name"],
+        quantization_configuration=quantization_config,
+    )
 
     # LoRA
     # TOASS: Is the rest of the model frozen
     # TOASS: Are the lora weights quantized?
     # TOASS: Are the lora weights updating during fine-tuning?
-    lora_configuration = LoraConfiguration(**CARED_CONFIGURATIONS.get("lora_config", {}))
+    lora_configuration = LoraConfiguration(
+        **CARED_CONFIGURATIONS.get("lora_config", {})
+    )
     model_manager.lorify(lora_configuration, module_style="qlora")
     logger.info(model_manager.model)
 
     # Text Generation
-    text_gen_config = TextGenConfiguration(tokenization_manager.tokenizer, **CARED_CONFIGURATIONS.get("text_gen_config",
-                                                                                                      {}))
+    text_gen_config = TextGenConfiguration(
+        tokenization_manager.tokenizer,
+        **CARED_CONFIGURATIONS.get("text_gen_config", {}),
+    )
     prompt = tokenization_manager.encode("This")
     sequence = model_manager.infer(prompt, text_gen_config)
     text = tokenization_manager.decode(sequence, text_gen_config)
@@ -180,6 +206,6 @@ if __name__ == "__main__":
         validation_dataloader=validation_dataloader,
         database_path=DB_PATH,
         run_name=run_name,
-        use_wandb=args.config_path == "wandb"
+        use_wandb=args.config_path == "wandb",
     )
     trainer.train()
