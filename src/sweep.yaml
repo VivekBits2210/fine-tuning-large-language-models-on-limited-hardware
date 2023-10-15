@@ -5,8 +5,10 @@ metric:
   goal: minimize
   name: eval_loss
 parameters:
+  config_path:
+    value: "wandb"
   user_config.env:
-    value: "qlora_sweep"
+    value: "qlora_sweep_better"
   tokenizer_config.tokenizer_name:
     value: "speedup"
   model_name:
@@ -15,18 +17,15 @@ parameters:
     value: "NIH_ExPORTER_awarded_grant_text"
   batch_size:
     values: [8, 16, 32, 64]
-  lora_config:
-    r:
+  lora_config.r:
       values: [ 16, 32, 64, 128 ]
-    lora_alpha:
+  lora_config.lora_alpha:
       values: [ 2, 4, 8, 16, 32 ]
-    lora_dropout:
+  lora_config.lora_dropout:
       values: [ 0.01, 0.1, 0.2, 0.3, 0.4 ]
-  quant_config:
-    bnb_4bit_use_double_quant:
+      quantization_config.bnb_4bit_use_double_quant:
       values: [ true, false ]
-  train_config:
-    lr:
+  train_config.lr:
       values: [ 1e-4, 2e-4, 5e-4, 3e-5, 5e-5 ]
-    num_warmup_steps:
+  train_config.num_warmup_steps:
       values: [ 0, 5, 10 ]

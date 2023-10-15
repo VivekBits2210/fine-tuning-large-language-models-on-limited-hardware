@@ -1,4 +1,3 @@
-import argparse
 import logging
 import gc
 import json
@@ -43,23 +42,28 @@ OS_ENV_DICT = {
     "TOKENIZERS_PARALLELISM": "false",
 }
 
+def nested_dict_from_flat(flat_dict):
+    nested_dict = {}
+    for key, value in flat_dict.items():
+        keys = key.split(".")
+        d = nested_dict
+        for k in keys[:-1]:
+            d = d.setdefault(k, {})
+        d[keys[-1]] = value
+    return nested_dict
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Your script description")
-    parser.add_argument(
-        "--config_path",
-        type=str,
-        required=False,
-        default="wandb",
-        help="Path to the JSON file containing CARED_CONFIGURATIONS",
-    )
-
     args = parser.parse_args()
-    if args.config_path.endswith(".json"):
+    config_path = args.config_path if args.config_path else ""
+    
+    if config_path.endswith(".json"):
         with open(args.config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
-    elif args.config_path == "wandb":
+    elif config_path == "wandb"
         wandb.init(project="qlora_finetuning")
-        CARED_CONFIGURATIONS = {k: v for k, v in wandb.config.as_dict().items()}
+        CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
+        logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
     else:
         raise Exception("Expected json configuration")
 
@@ -206,6 +210,6 @@ if __name__ == "__main__":
         validation_dataloader=validation_dataloader,
         database_path=DB_PATH,
         run_name=run_name,
-        use_wandb=args.config_path == "wandb",
+        use_wandb=config_path == "wandb",
     )
     trainer.train()

@@ -143,10 +143,20 @@ def store_god_configurations_if_not_exists(db_path, god_tag, tokenizer):
 
 
 def generate_run_name(cared_configurations):
-    """Generate an aesthetic run name by concatenating the key-value pairs."""
+    """Generate an aesthetic run name by concatenating the key-value pairs and appending a timestamp."""
     flat_config = flatten_dict(cared_configurations)
     sorted_config = sorted(flat_config.items(), key=lambda kv: kv[0])
-    return "|".join([f"{key}-{value}" for key, value in sorted_config])
+    
+    # Generate the base run name by concatenating key-value pairs
+    base_run_name = "|".join([f"{key}-{value}" for key, value in sorted_config])
+    
+    # Get the current timestamp and convert it to a string
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Append the timestamp to the base run name
+    run_name = f"{base_run_name}_{timestamp}"
+    
+    return run_name
 
 
 def store_cared_configurations(db_path, god_tag, cared_configurations):
