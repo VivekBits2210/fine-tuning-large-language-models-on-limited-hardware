@@ -71,18 +71,16 @@ def parse_args(argv):
 
 if __name__ == "__main__":
     args = parse_args(sys.argv)
-    logging.info(f"ARGS={args}")
+    print(f"ARGS={args}")
     
     config_path = args.get("config_path", "")
     if config_path.endswith(".json"):
         with open(config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
-    elif config_path == "wandb":
+    else:
         wandb.init(project="qlora_finetuning")
         CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
-    else:
-        raise Exception("Expected json configuration")
 
     # Clear the GPU
     torch.cuda.empty_cache()
