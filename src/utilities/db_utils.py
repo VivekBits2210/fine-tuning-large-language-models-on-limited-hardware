@@ -182,10 +182,10 @@ def store_metric(db_path, metric_tag, run_name, metric_details):
 
     # Current timestamp
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    logging.info(
-        f"DB_PATH {db_path}, metric_tag {metric_tag}, run_name {run_name}, metric_details {metric_details}, "
-        f"timestamp {timestamp}"
-    )
+    # logging.info(
+    #     f"DB_PATH {db_path}, metric_tag {metric_tag}, run_name {run_name}, metric_details {metric_details}, "
+    #     f"timestamp {timestamp}"
+    # )
 
     # Convert the metric details (assuming it's a dictionary) to a JSON string
     metric_json = json.dumps(metric_details)
