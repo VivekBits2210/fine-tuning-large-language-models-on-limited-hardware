@@ -1,3 +1,4 @@
+import sys
 import logging
 import gc
 import json
@@ -52,15 +53,31 @@ def nested_dict_from_flat(flat_dict):
         d[keys[-1]] = value
     return nested_dict
 
+def parse_args(argv):
+    args = {}
+    current_key = None
+    for token in argv[1:]:
+        if token.startswith("--"):
+            if current_key is not None:
+                args[current_key] = None
+            current_key = token[2:]
+        else:
+            args[current_key] = token
+            current_key = None
+    if current_key is not None:
+        args[current_key] = None
+    return args 
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Your script description")
-    args = parser.parse_args()
-    config_path = args.config_path if args.config_path else ""
+    args = parse_args(sys.argv)
+    logging.info(f"ARGS={args}")
     
+    config_path = args.get("config_path", "")
     if config_path.endswith(".json"):
-        with open(args.config_path, "r") as f:
+        with open(config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
-    elif config_path == "wandb"
+    elif config_path == "wandb":
         wandb.init(project="qlora_finetuning")
         CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
