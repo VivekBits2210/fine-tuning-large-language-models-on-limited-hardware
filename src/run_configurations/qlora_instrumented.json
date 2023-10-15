@@ -1,6 +1,6 @@
 {
     "user_config": {
-        "env": "qlora_json_instrumented"
+        "env": "qlora_json_instrumented_better"
     },
     "tokenizer_config": {
         "tokenizer_name": "speedup"
