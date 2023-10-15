@@ -18,14 +18,16 @@ parameters:
   batch_size:
     values: [8, 16, 32, 64]
   lora_config.r:
-      values: [ 16, 32, 64, 128 ]
+    values: [ 16, 32, 64, 128 ]
   lora_config.lora_alpha:
-      values: [ 2, 4, 8, 16, 32 ]
+    values: [ 2, 4, 8, 16, 32 ]
   lora_config.lora_dropout:
-      values: [ 0.01, 0.1, 0.2, 0.3, 0.4 ]
-      quantization_config.bnb_4bit_use_double_quant:
-      values: [ true, false ]
+    values: [ 0.01, 0.1, 0.2, 0.3, 0.4 ]
+  quantization_config.bnb_4bit_use_double_quant:
+    values: [ true, false ]
   train_config.lr:
-      values: [ 1e-4, 2e-4, 5e-4, 3e-5, 5e-5 ]
+    values: [ 1e-3, 5e-3, 1e-4, 2e-4, 5e-4, 3e-5, 5e-5 ]
   train_config.num_warmup_steps:
-      values: [ 0, 5, 10 ]
+    values: [ 0, 5, 10 ]
+  train_config.optim_bits:
+    values: [ 8, 16, 32]
