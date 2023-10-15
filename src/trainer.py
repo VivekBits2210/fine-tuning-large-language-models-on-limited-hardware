@@ -144,18 +144,15 @@ class Trainer:
 
         if index % 100 == 0:
             training_loss_details = {
-                "epoch": epoch,
-                "index": index,
+                "epoch": epoch + (index / len(self.training_dataloader)),
                 "running_loss": self.running_loss / index,
             }
             learning_rate_details = {
-                "epoch": epoch,
-                "index": index,
+                "epoch": epoch + (index / len(self.training_dataloader)),
                 "learning_rate": current_lr,
             }
             gpu_details = {
-                "epoch": epoch,
-                "index": index,
+                "epoch": epoch + (index / len(self.training_dataloader)),
                 "gpu_util": self.system_monitor.get_gpu_utilization(),
                 "ram_usage": self.system_monitor.get_ram_usage(),
             }
@@ -192,7 +189,7 @@ class Trainer:
             with open(f"{self.log_path}/training.log", "a") as f:
                 f.write(f"{epoch}\t{index}\t{self.running_loss / index}\t{text}\n")
 
-            text_gen_details = {"epoch": epoch, "index": index, "text": text}
+            text_gen_details = {"epoch": epoch + (index / len(self.training_dataloader)), "text": text}
             store_metric(
                 self.database_path, "generated_text", self.run_name, text_gen_details
             )
@@ -215,7 +212,7 @@ class Trainer:
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
         store_checkpoint(
             self.database_path,
-            epoch + ((1.0 * index) / len(self.training_dataloader)),
+            epoch + (index / len(self.training_dataloader)),
             self.run_name,
             checkpointing_path,
         )
@@ -236,8 +233,7 @@ class Trainer:
             f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
 
         metric_details = {
-            "epoch": epoch,
-            "index": index,
+            "epoch": epoch + (index / len(self.training_dataloader)),
             "eval_loss": avg_eval_loss,
             "perplexity": perplexity,
         }
