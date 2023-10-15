@@ -8,7 +8,7 @@ parameters:
   config_path:
     value: "wandb"
   user_config.env:
-    value: "qlora_sweep_better"
+    value: "qlora_sweep_that_works"
   tokenizer_config.tokenizer_name:
     value: "speedup"
   model_name:
@@ -30,4 +30,4 @@ parameters:
   train_config.num_warmup_steps:
     values: [ 0, 5, 10 ]
   train_config.optim_bits:
-    values: [ 8, 16, 32]
+    values: [ 8, 32]
