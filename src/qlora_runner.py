@@ -78,6 +78,7 @@ if __name__ == "__main__":
         with open(config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
     else:
+        config_path = "wandb"
         wandb.init(project="qlora_finetuning")
         CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
