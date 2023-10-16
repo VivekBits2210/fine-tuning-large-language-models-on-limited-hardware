@@ -38,6 +38,19 @@ class TokenizationManager:
             return_attention_mask=self.tokenization_config.return_attention_mask,
         )
 
+    def tokenize_for_text_classification(self, data):
+        return {
+            "input_ids": self.tokenizer(
+                data['Title'] + " " + data['Abstract'],
+                padding=self.tokenization_config.padding_strategy,
+                truncation=self.tokenization_config.truncation,
+                max_length=self.tokenization_config.max_tokens,
+                return_attention_mask=self.tokenization_config.return_attention_mask,
+                return_tensors="pt",
+            )["input_ids"],
+            "labels": data["labels"]
+        }
+
     def encode(self, prompt: str = "This"):
         sequence = self.tokenizer(
             self.tokenizer.eos_token + prompt, return_tensors="pt"

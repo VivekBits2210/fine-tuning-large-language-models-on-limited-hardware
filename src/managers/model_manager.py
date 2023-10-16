@@ -2,7 +2,7 @@ import logging
 import torch
 from tqdm import tqdm
 from typing import Optional
-from transformers import AutoModelForCausalLM, AutoConfig, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoConfig, BitsAndBytesConfig
 from peft import get_peft_model, LoraConfig
 import bitsandbytes as bnb
 from utilities.profiler_utils import measure_time_taken
@@ -24,15 +24,22 @@ class ModelManager:
         self.model.to(self.device)
         self.__augment_model()
 
-    def load(self, model_name: str, quantization_configuration=None) -> None:
+    def load(self, model_name: str, quantization_configuration=None, style="causal", num_labels=None) -> None:
         self.model_name = model_name
 
         configuration = AutoConfig.from_pretrained(self.model_name)
 
         if not quantization_configuration:
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name, config=configuration
-            )
+            if style == "causal":
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name, config=configuration
+                )
+            elif style == "classification":
+                self.model = AutoModelForSequenceClassification.from_pretrained(
+                    self.model_name, config=configuration, num_labels = num_labels
+                )
+            else:
+                raise Exception("Model style not recognized!")
             self.model.to(self.device)
         else:
             quantization_config = BitsAndBytesConfig(

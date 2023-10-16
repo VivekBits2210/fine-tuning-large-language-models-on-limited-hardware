@@ -1,9 +1,10 @@
 import os
 import random
 import logging
+import torch
 from datasets import load_dataset, Dataset, DatasetDict, load_from_disk
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from transformers import DataCollatorForLanguageModeling
+from transformers import DataCollatorForLanguageModeling, DataCollatorWithPadding
 
 from utilities.profiler_utils import measure_time_taken
 from config import UserConfiguration, TokenizerConfiguration, SystemConfiguration
@@ -27,6 +28,26 @@ class DataManager:
         self.data_collator = None
         self.dataset = None
         self.tokenized_dataset = None
+
+    @measure_time_taken
+    def create_dataset_from_csv_for_text_classification(self, name: str, csv_file_path: str, save_to_disk=True, topics=[]) -> None:
+        self.dataset_name = name
+        self.dataset = load_dataset(
+            "csv",
+            data_files=csv_file_path,
+            num_proc=self.system_config.num_workers,
+            cache_dir=self.user_config.cache_path,
+        )
+
+        # Handling multi-label
+        def format_multilabel(example):
+            example['labels'] = torch.tensor([example[topic] for topic in topics])
+            return example
+
+        self.dataset = self.dataset.map(format_multilabel)
+
+        if save_to_disk:
+            self.dataset.save_to_disk(self.user_config.data_path)
 
     @measure_time_taken
     def create_dataset_from_jsonl_zst_file(
@@ -105,6 +126,9 @@ class DataManager:
         self.data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer, mlm=False
         )
+
+    def set_data_collator_for_text_classification(self, tokenizer) -> None:
+        self.data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
     def fetch_train_validation_split_from_disk(self):
         if not self.dataset_name:
