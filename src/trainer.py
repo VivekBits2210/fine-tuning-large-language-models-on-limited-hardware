@@ -36,7 +36,9 @@ class Trainer:
         database_path,
         run_name,
         use_wandb=False,
+        task="generation"
     ):
+        self.task = task
         self.use_wandb = use_wandb
         self.model_name = model_manager.model_name
         self.user_config = user_config
@@ -178,7 +180,7 @@ class Trainer:
                 wandb.log(gpu_details)
 
         # Sample an output from the model, at each sampling interval
-        if index % self.train_config.sampling_interval == 0:
+        if index % self.train_config.sampling_interval == 0 and self.task=="generate":
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
             text = self.tokenization_manager.decode(sequence, self.text_gen_config)
@@ -202,7 +204,10 @@ class Trainer:
 
         # Validate the model at each validation interval
         if index % self.train_config.validation_interval == 0:
-            self.validate_model(epoch, index)
+            if self.task == "generation":
+                self.validate_model(epoch, index)
+            elif self.task == "classification":
+                self.validate_model_for_classification(epoch, index)
 
         self.forward_backward_pass(batch)
 
@@ -240,6 +245,55 @@ class Trainer:
         store_metric(
             self.database_path, "validation_metrics", self.run_name, metric_details
         )
+        if self.use_wandb:
+            wandb.log(metric_details)
+
+    @measure_time_taken
+    def validate_model_for_classification(self, epoch, index):
+        logger.info("Running Validation...")
+        total_eval_loss = 0
+        all_preds = []
+        all_labels = []
+
+        self.model_manager.model.eval()  # Ensure model is in evaluation mode
+
+        for batch in self.validation_dataloader:
+            with torch.no_grad():
+                batch = {k: v.to(self.model_manager.device) for k, v in batch.items()}
+                outputs = self.model_manager.model(**batch)
+                loss, logits = outputs.loss, outputs.logits
+                total_eval_loss += loss.item()
+
+                preds = torch.argmax(logits, dim=-1)
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(batch['labels'].cpu().numpy())
+
+        avg_eval_loss = total_eval_loss / len(self.validation_dataloader)
+
+        # Compute metrics
+        accuracy = accuracy_score(all_labels, all_preds)
+        f1 = f1_score(all_labels, all_preds, average='weighted')
+        precision = precision_score(all_labels, all_preds, average='weighted')
+        recall = recall_score(all_labels, all_preds, average='weighted')
+
+        logger.info(
+            f"Batch {index}/{len(self.training_dataloader)}, "
+            f"Validation Loss: {avg_eval_loss:.4f}, "
+            f"Accuracy: {accuracy:.2f}, F1: {f1:.2f}, "
+            f"Precision: {precision:.2f}, Recall: {recall:.2f}"
+        )
+        with open(f"{self.log_path}/validation.log", "a") as f:
+            f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{accuracy}\t{f1}\t{precision}\t{recall}\n")
+
+        metric_details = {
+            "epoch": epoch + (index / len(self.training_dataloader)),
+            "eval_loss": avg_eval_loss,
+            "accuracy": accuracy,
+            "f1_score": f1,
+            "precision": precision,
+            "recall": recall
+        }
+        store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
         if self.use_wandb:
             wandb.log(metric_details)
 

@@ -1,0 +1,15 @@
+{
+    "user_config": {
+        "env": "qlora_json_instrumented_bigger_model_classification"
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "classification-big",
+        "max_tokens": 512
+    },
+    "lora_config": {
+        "task_type": "SEQ_CLS"
+    },
+    "model_name": "facebook/opt-1.3b",
+    "dataset_name": "paper_abstract_topic_prediction",
+    "batch_size": 16
+}
