@@ -39,20 +39,9 @@ class TokenizationManager:
         )
 
     def tokenize_for_text_classification(self, data):
-        # title = data['TITLE']
-        # abstract = data['ABSTRACT']
-
-        # Convert to string if they are lists
-        # if isinstance(title, list):
-        #     print(f"LIST TITLE: {title}")
-        #     raise Exception
-        # if isinstance(abstract, list):
-        #     print(f"LIST ABSTRACT: {abstract}")
-        #     raise Exception
-
         return {
             "input_ids": self.tokenizer(
-                data['TITLE'] + "--" + data['ABSTRACT'],
+                data["text"],
                 padding=self.tokenization_config.padding_strategy,
                 truncation=self.tokenization_config.truncation,
                 max_length=self.tokenization_config.max_tokens,
@@ -61,7 +50,7 @@ class TokenizationManager:
             )["input_ids"],
             "labels": data["labels"]
         }
-
+    
     def encode(self, prompt: str = "This"):
         sequence = self.tokenizer(
             self.tokenizer.eos_token + prompt, return_tensors="pt"

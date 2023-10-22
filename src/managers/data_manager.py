@@ -36,19 +36,24 @@ class DataManager:
             "csv",
             data_files=csv_file_path,
             num_proc=self.system_config.num_workers,
+            split="train",
             cache_dir=self.user_config.cache_path,
         )
         # Handling multi-label
         def format_multilabel(example):
             example['labels'] = torch.tensor([example[topic] for topic in topics])
+            example['text'] = example['TITLE'] + " : " + example['ABSTRACT']
             return example
+
+        
+        self.dataset = self.dataset.map(format_multilabel)
+        self.dataset = self.dataset.remove_columns(['ID', 'TITLE', 'ABSTRACT', 'Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance'])
 
         print(f"DATASET LENGTH: {len(self.dataset)}")
         print(f"DATASET COLUMNS: {self.dataset.column_names}")
         print(f"DATASET LABEL FIRST: {self.dataset['labels'][0]}")
-        print(f"DATASET TITLE FIRST: {self.dataset['TITLE'][0]}")
+        print(f"DATASET TITLE FIRST: {self.dataset['text'][0]}")
 
-        self.dataset = self.dataset.map(format_multilabel)
         if save_to_disk:
             self.dataset.save_to_disk(self.user_config.data_path)
 
@@ -69,7 +74,7 @@ class DataManager:
 
     @measure_time_taken
     def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True, is_classification: bool = False) -> None:
-        remove_columns = ["text", "meta"] if not is_classification else ['ID', 'TITLE', 'ABSTRACT', 'Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
+        remove_columns = ["text", "meta"] if not is_classification else ["text"]
         self.tokenized_dataset = self.dataset.map(
             tokenizer,
             batched=True,
