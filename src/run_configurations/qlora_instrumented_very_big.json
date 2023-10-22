@@ -1,0 +1,19 @@
+{
+    "user_config": {
+        "env": "qlora_json_instrumented_even_bigger_model_optimized"
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "speedup-bigger"
+    },
+    "train_config": {
+        "epochs": 50,
+        "optim_bits": 8
+    },
+    "lora_config": {
+        "lora_alpha": 32,
+        "lora_dropout": 0.3
+    },
+    "model_name": "facebook/opt-6.7b",
+    "dataset_name": "NIH_ExPORTER_awarded_grant_text",
+    "batch_size": 16
+}

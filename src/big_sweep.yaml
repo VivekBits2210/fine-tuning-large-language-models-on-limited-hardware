@@ -1,0 +1,31 @@
+project: qlora_finetuning
+program: qlora_runner.py
+method: bayes
+metric:
+  goal: minimize
+  name: eval_loss
+parameters:
+  config_path:
+    value: "wandb"
+  user_config.env:
+    value: "big_qlora_sweep_that_works"
+  tokenizer_config.tokenizer_name:
+    value: "speedup-big"
+  model_name:
+    value: "facebook/opt-1.3b"
+  dataset_name:
+    value: "NIH_ExPORTER_awarded_grant_text"
+  train_config.optim_bits:
+    value: 8
+  quantization_config.bnb_4bit_use_double_quant:
+    value: true
+  batch_size:
+    values: [ 4, 8, 16]
+  lora_config.r:
+    values: [ 16, 32, 64 ]
+  lora_config.lora_alpha:
+    values: [ 16, 32, 64 ]
+  lora_config.lora_dropout:
+    values: [ 0.2, 0.25, 0.3, 0.4, 0.5]
+  train_config.lr:
+    values: [ 5e-3, 1e-4, 2e-4, 5e-4]
