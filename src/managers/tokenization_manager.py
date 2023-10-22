@@ -39,6 +39,17 @@ class TokenizationManager:
         )
 
     def tokenize_for_text_classification(self, data):
+        title = data['TITLE']
+        abstract = data['ABSTRACT']
+
+        # Convert to string if they are lists
+        if isinstance(title, list):
+            print(f"LIST TITLE: {title}")
+            raise Exception
+        if isinstance(abstract, list):
+            print(f"LIST ABSTRACT: {abstract}")
+            raise Exception
+
         return {
             "input_ids": self.tokenizer(
                 data['TITLE'] + "--" + data['ABSTRACT'],
