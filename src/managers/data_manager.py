@@ -65,7 +65,9 @@ class DataManager:
             self.dataset.save_to_disk(self.user_config.data_path)
 
     @measure_time_taken
-    def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True) -> None:
+    def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True, is_classification: bool = False) -> None:
+        print(self.dataset.column_names)
+        raise Exception
         self.tokenized_dataset = self.dataset.map(
             tokenizer,
             batched=True,

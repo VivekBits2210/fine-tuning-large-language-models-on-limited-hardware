@@ -166,7 +166,7 @@ if __name__ == "__main__":
             topics=['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
         )
 
-        data_manager.create_tokenized_dataset(tokenization_manager.tokenize_for_text_classification)
+        data_manager.create_tokenized_dataset(tokenization_manager.tokenize_for_text_classification, is_classification=True)
         (
             training_dataset,
             validation_dataset,
