@@ -233,5 +233,6 @@ if __name__ == "__main__":
         database_path=DB_PATH,
         run_name=run_name,
         use_wandb=config_path == "wandb",
+        task="classification"
     )
     trainer.train()

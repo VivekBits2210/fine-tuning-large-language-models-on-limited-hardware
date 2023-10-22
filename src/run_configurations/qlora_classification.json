@@ -1,10 +1,10 @@
 {
     "user_config": {
-        "env": "qlora_json_instrumented_bigger_model_classification"
+        "env": "qlora_model_classification_second_run"
     },
     "tokenizer_config": {
-        "tokenizer_name": "classification-big",
-        "max_tokens": 512
+        "tokenizer_name": "classification-big-with-many-tokens",
+        "max_tokens": 1024
     },
     "lora_config": {
         "task_type": "SEQ_CLS"
