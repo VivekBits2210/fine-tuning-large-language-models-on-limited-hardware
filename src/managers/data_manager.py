@@ -38,14 +38,17 @@ class DataManager:
             num_proc=self.system_config.num_workers,
             cache_dir=self.user_config.cache_path,
         )
-        
         # Handling multi-label
         def format_multilabel(example):
             example['labels'] = torch.tensor([example[topic] for topic in topics])
             return example
 
-        self.dataset = self.dataset.map(format_multilabel)
+        print(f"DATASET LENGTH: {len(self.dataset)}")
+        print(f"DATASET COLUMNS: {self.dataset.column_names}")
+        print(f"DATASET LABEL FIRST: {self.dataset['labels'][0]}")
+        print(f"DATASET TITLE FIRST: {self.dataset['TITLE'][0]}")
 
+        self.dataset = self.dataset.map(format_multilabel)
         if save_to_disk:
             self.dataset.save_to_disk(self.user_config.data_path)
 
