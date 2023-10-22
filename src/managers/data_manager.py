@@ -66,13 +66,13 @@ class DataManager:
 
     @measure_time_taken
     def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True, is_classification: bool = False) -> None:
-        print(self.dataset.column_names)
-        raise Exception
         self.tokenized_dataset = self.dataset.map(
             tokenizer,
             batched=True,
             num_proc=self.system_config.num_workers,
-            remove_columns=["text", "meta"] if not is_classification else ["ID"], 
+            remove_columns=["text", "meta"] if not is_classification else
+            ['ID', 'TITLE', 'ABSTRACT', 'Computer Science', 'Physics', 'Mathematics', 'Statistics',
+             'Quantitative Biology', 'Quantitative Finance'],
         )
         if save_to_disk:
             if not self.dataset_name:
