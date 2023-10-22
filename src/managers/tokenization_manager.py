@@ -41,7 +41,7 @@ class TokenizationManager:
     def tokenize_for_text_classification(self, data):
         return {
             "input_ids": self.tokenizer(
-                data['Title'] + " " + data['Abstract'],
+                data['TITLE'] + "--" + data['ABSTRACT'],
                 padding=self.tokenization_config.padding_strategy,
                 truncation=self.tokenization_config.truncation,
                 max_length=self.tokenization_config.max_tokens,

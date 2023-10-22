@@ -38,7 +38,7 @@ class DataManager:
             num_proc=self.system_config.num_workers,
             cache_dir=self.user_config.cache_path,
         )
-
+        
         # Handling multi-label
         def format_multilabel(example):
             example['labels'] = torch.tensor([example[topic] for topic in topics])
@@ -70,7 +70,7 @@ class DataManager:
             tokenizer,
             batched=True,
             num_proc=self.system_config.num_workers,
-            remove_columns=["text", "meta"],
+            remove_columns=["text", "meta"] if not is_classification else ["ID"], 
         )
         if save_to_disk:
             if not self.dataset_name:

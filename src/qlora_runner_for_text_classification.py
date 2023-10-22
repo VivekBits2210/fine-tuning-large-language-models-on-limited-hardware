@@ -160,9 +160,10 @@ if __name__ == "__main__":
         logger.warning(f"{fe.__repr__()}")
         data_manager.create_dataset_from_csv_for_text_classification(
             name=data_manager.dataset_name,
-            jsonl_zst_file_path=os.path.join(
+            csv_file_path=os.path.join(
                 user_config.cache_path, f"{data_manager.dataset_name}.csv"
             ),
+            topics=['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
         )
 
         data_manager.create_tokenized_dataset(tokenization_manager.tokenize_for_text_classification)
