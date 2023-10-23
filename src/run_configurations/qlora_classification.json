@@ -9,6 +9,10 @@
     "lora_config": {
         "task_type": "SEQ_CLS"
     },
+    "train_config": {
+        "epochs": 10,
+        "validation_interval": 10
+    },
     "model_name": "facebook/opt-1.3b",
     "dataset_name": "paper_abstract_topic_prediction",
     "batch_size": 2

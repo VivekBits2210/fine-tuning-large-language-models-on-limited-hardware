@@ -273,6 +273,8 @@ class Trainer:
         avg_eval_loss = total_eval_loss / len(self.validation_dataloader)
 
         # Compute metrics
+        print(f"FIRST LABEL: {len(all_labels[0])}")
+        print(f"FIRST PREDICTION: {len(all_preds[0])} ")
         accuracy = accuracy_score(all_labels, all_preds)
         f1 = f1_score(all_labels, all_preds, average='weighted')
         precision = precision_score(all_labels, all_preds, average='weighted')
