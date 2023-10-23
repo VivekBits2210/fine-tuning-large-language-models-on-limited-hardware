@@ -259,7 +259,7 @@ class Trainer:
         for batch in self.validation_dataloader:
             with torch.no_grad():
                 batch = {k: v.to(self.model_manager.device) for k, v in batch.items()}
-                outputs = self.model_manager.model(**batch)
+                outputs = self.model_manager.model(batch['input_ids'], attention_mask=batch['attention_mask'])
                 loss, logits = outputs.loss, outputs.logits
                 total_eval_loss += loss.item()
 
@@ -285,7 +285,7 @@ class Trainer:
             k: v.pin_memory().to(self.model_manager.device, non_blocking=True)
             for k, v in batch.items()
         }
-        outputs = self.model_manager.model(**batch)
+        outputs = self.model_manager.model(batch['input_ids'], attention_mask=batch['attention_mask'])
         loss = outputs.loss
         self.running_loss += loss.item()
         loss.backward()

@@ -1,3 +1,4 @@
+import torch
 from torch.utils.data import Dataset
 class MultilabelDataset(Dataset):
     def __init__(self, pandas_df, tokenizer, max_length=1024):

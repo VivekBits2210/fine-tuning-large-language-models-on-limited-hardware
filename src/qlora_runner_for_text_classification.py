@@ -6,6 +6,9 @@ import os
 import datetime
 import torch
 import wandb
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
 from config import (
     UserConfiguration,
@@ -154,15 +157,15 @@ if __name__ == "__main__":
     train_df, val_df = train_test_split(df, test_size=0.2)
     train_dataset = MultilabelDataset(train_df, tokenization_manager.tokenizer)
     val_dataset = MultilabelDataset(val_df, tokenization_manager.tokenizer)
-    train_dataloader = DataLoader(
+    training_dataloader = DataLoader(
         train_dataset,
         sampler=RandomSampler(train_dataset),
-        batch_size=batch_size
+        batch_size=CARED_CONFIGURATIONS["batch_size"]
     )
     validation_dataloader = DataLoader(
         val_dataset,
         sampler=SequentialSampler(val_dataset),
-        batch_size=batch_size
+        batch_size=CARED_CONFIGURATIONS["batch_size"]
     )
     
     # Quantization
@@ -198,6 +201,7 @@ if __name__ == "__main__":
     )
     
     # Training
+    model_manager.model.config.problem_type = "multi_label_classification"
     train_config = TrainerConfiguration(**CARED_CONFIGURATIONS.get("train_config", {}))
     trainer = Trainer(
         user_config=user_config,
