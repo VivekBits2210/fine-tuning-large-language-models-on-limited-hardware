@@ -21,7 +21,6 @@ class ModelManager:
     @measure_time_taken
     def load_from_path(self, load_path: str) -> None:
         self.model = AutoModelForCausalLM.from_pretrained(load_path)
-        self.model.to(self.device)
         self.__augment_model()
 
     def load(self, model_name: str, quantization_configuration=None, style="causal", num_labels=None) -> None:
@@ -40,7 +39,6 @@ class ModelManager:
                 )
             else:
                 raise Exception("Model style not recognized!")
-            self.model.to(self.device)
         else:
             quantization_config = BitsAndBytesConfig(
                 load_in_4bit=quantization_configuration.load_in_4bit,
