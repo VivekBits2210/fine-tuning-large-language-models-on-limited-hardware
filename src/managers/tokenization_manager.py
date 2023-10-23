@@ -39,16 +39,17 @@ class TokenizationManager:
         )
 
     def tokenize_for_text_classification(self, data):
+        tokenized_data = self.tokenizer(
+            data["text"],
+            padding=self.tokenization_config.padding_strategy,
+            truncation=self.tokenization_config.truncation,
+            max_length=self.tokenization_config.max_tokens,
+            return_attention_mask=self.tokenization_config.return_attention_mask,
+        )
         return {
-            "input_ids": self.tokenizer(
-                data["text"],
-                padding=self.tokenization_config.padding_strategy,
-                truncation=self.tokenization_config.truncation,
-                max_length=self.tokenization_config.max_tokens,
-                return_attention_mask=self.tokenization_config.return_attention_mask,
-                return_tensors="pt",
-            )["input_ids"],
-            "labels": data["labels"]
+        "input_ids": tokenized_data["input_ids"],
+        "attention_mask": tokenized_data["attention_mask"],
+        "labels": data['labels'],
         }
     
     def encode(self, prompt: str = "This"):

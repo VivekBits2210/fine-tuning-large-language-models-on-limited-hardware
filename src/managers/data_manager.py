@@ -77,10 +77,12 @@ class DataManager:
         remove_columns = ["text", "meta"] if not is_classification else ["text"]
         self.tokenized_dataset = self.dataset.map(
             tokenizer,
-            batched=True,
             num_proc=self.system_config.num_workers,
             remove_columns=remove_columns,
         )
+        print(f"TOKENIZED INPUT IDS SHAPE: {self.tokenized_dataset['input_ids'][0]}")
+        print(f"TOKENIZED LABELS SHAPE: {self.tokenized_dataset['labels'][0]}")
+
         if save_to_disk:
             if not self.dataset_name:
                 raise Exception(
@@ -104,6 +106,8 @@ class DataManager:
         sampled_dataset = self.tokenized_dataset.shuffle(seed=random_seed).select(
             range(keep_size)
         )
+        print(f"TOKENIZED INPUT IDS SHAPE: {sampled_dataset['input_ids'][0]}")
+        print(f"TOKENIZED LABELS SHAPE: {sampled_dataset['labels'][0]}")
 
         train_size = int(split_ratio * len(sampled_dataset))
         datasets = DatasetDict(
@@ -112,6 +116,10 @@ class DataManager:
                 "valid": Dataset.from_dict(sampled_dataset[train_size:]),
             }
         )
+        for batch in datasets["train"]:
+            print(f"BATCH INPUT IDS SHAPE: {batch['input_ids'][0]}")
+            print(f"BATCH LABELS SHAPE: {batch['labels'][0]}")
+            break
 
         if save_to_disk:
             if not self.dataset_name:
@@ -137,7 +145,7 @@ class DataManager:
         )
 
     def set_data_collator_for_text_classification(self, tokenizer) -> None:
-        self.data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+        self.data_collator = DataCollatorWithPadding(tokenizer=tokenizer)  # DataCollatorForTokenClassification
 
     def fetch_train_validation_split_from_disk(self):
         if not self.dataset_name:

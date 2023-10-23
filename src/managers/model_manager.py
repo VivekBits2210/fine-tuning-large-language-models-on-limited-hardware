@@ -26,16 +26,17 @@ class ModelManager:
     def load(self, model_name: str, quantization_configuration=None, style="causal", num_labels=None) -> None:
         self.model_name = model_name
 
-        configuration = AutoConfig.from_pretrained(self.model_name)
 
         if not quantization_configuration:
             if style == "causal":
+                configuration = AutoConfig.from_pretrained(self.model_name)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name, config=configuration
                 )
             elif style == "classification":
+                configuration = AutoConfig.from_pretrained(self.model_name, num_labels = num_labels)
                 self.model = AutoModelForSequenceClassification.from_pretrained(
-                    self.model_name, config=configuration, num_labels = num_labels
+                    self.model_name, config=configuration
                 )
             else:
                 raise Exception("Model style not recognized!")
@@ -49,12 +50,18 @@ class ModelManager:
 
             logger.info(f"Quantizing the model with config as {quantization_config}")
             self.is_quantized = True
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                config=configuration,
-                device_map="auto",
-                quantization_config=quantization_config,
-            )
+            if style == "causal":
+                configuration = AutoConfig.from_pretrained(self.model_name)
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name, config=configuration, device_map="auto", quantization_config=quantization_config
+                )
+            elif style == "classification":
+                configuration = AutoConfig.from_pretrained(self.model_name, num_labels = num_labels)
+                self.model = AutoModelForSequenceClassification.from_pretrained(
+                    self.model_name, config=configuration, device_map="auto", quantization_config=quantization_config,
+                )
+            else:
+                raise Exception("Model style not recognized!")
         self.__augment_model()
 
     def lorify(self, lora_configuration, module_style):

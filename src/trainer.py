@@ -254,9 +254,6 @@ class Trainer:
     def validate_model_for_classification(self, epoch, index):
         logger.info("Running Validation...")
         total_eval_loss = 0
-        all_preds = []
-        all_labels = []
-
         self.model_manager.model.eval()  # Ensure model is in evaluation mode
 
         for batch in self.validation_dataloader:
@@ -265,20 +262,6 @@ class Trainer:
                 outputs = self.model_manager.model(**batch)
                 loss, logits = outputs.loss, outputs.logits
                 total_eval_loss += loss.item()
-
-                preds = torch.argmax(logits, dim=-1)
-                all_preds.extend(preds.cpu().numpy())
-                all_labels.extend(batch['labels'].cpu().numpy())
-
-        avg_eval_loss = total_eval_loss / len(self.validation_dataloader)
-
-        # Compute metrics
-        print(f"FIRST LABEL: {len(all_labels[0])}")
-        print(f"FIRST PREDICTION: {len(all_preds[0])} ")
-        accuracy = accuracy_score(all_labels, all_preds)
-        f1 = f1_score(all_labels, all_preds, average='weighted')
-        precision = precision_score(all_labels, all_preds, average='weighted')
-        recall = recall_score(all_labels, all_preds, average='weighted')
 
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, "
@@ -292,10 +275,6 @@ class Trainer:
         metric_details = {
             "epoch": epoch + (index / len(self.training_dataloader)),
             "eval_loss": avg_eval_loss,
-            "accuracy": accuracy,
-            "f1_score": f1,
-            "precision": precision,
-            "recall": recall
         }
         store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
         if self.use_wandb:

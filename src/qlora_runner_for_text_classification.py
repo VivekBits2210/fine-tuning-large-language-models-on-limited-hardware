@@ -34,6 +34,7 @@ from utilities.db_utils import (
     store_cared_configurations,
     generate_run_name,
 )
+from managers.dataset_classes import MultilabelDataset
 
 GOD_TAG = "god1"
 OS_ENV_DICT = {
@@ -141,45 +142,29 @@ if __name__ == "__main__":
     )
     run_name = generate_run_name(
         CARED_CONFIGURATIONS
-    )  # using the function from db_utils
+)  # using the function from db_utils
     logger.info(f"Starting run name {run_name}...")
     store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
 
     # Data management and config
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
-    data_manager.set_data_collator(tokenization_manager.tokenizer)
 
-    # Fetch dataset
-    try:
-        (
-            training_dataset,
-            validation_dataset,
-        ) = data_manager.fetch_train_validation_split_from_disk()
-    except FileNotFoundError as fe:
-        logger.warning(f"{fe.__repr__()}")
-        data_manager.create_dataset_from_csv_for_text_classification(
-            name=data_manager.dataset_name,
-            csv_file_path=os.path.join(
-                user_config.cache_path, f"{data_manager.dataset_name}.csv"
-            ),
-            topics=['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
-        )
-
-        data_manager.create_tokenized_dataset(tokenization_manager.tokenize_for_text_classification, is_classification = True)
-        (
-            training_dataset,
-            validation_dataset,
-        ) = data_manager.fetch_train_validation_split()
-
-    # Data loaders
-    # TOASS: What do the snippets look like? Is the size of a snippet less than MAX_TOKENS?
-    training_dataloader, validation_dataloader = data_manager.fetch_dataloaders(
-        training_dataset=training_dataset,
-        validation_dataset=validation_dataset,
-        batch_size=CARED_CONFIGURATIONS["batch_size"],
+    df = pd.read_csv(os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")).sample(frac=0.2)
+    train_df, val_df = train_test_split(df, test_size=0.2)
+    train_dataset = MultilabelDataset(train_df, tokenization_manager.tokenizer)
+    val_dataset = MultilabelDataset(val_df, tokenization_manager.tokenizer)
+    train_dataloader = DataLoader(
+        train_dataset,
+        sampler=RandomSampler(train_dataset),
+        batch_size=batch_size
     )
-
+    validation_dataloader = DataLoader(
+        val_dataset,
+        sampler=SequentialSampler(val_dataset),
+        batch_size=batch_size
+    )
+    
     # Quantization
     # TOASS: Is bfloat available?
     quantization_config = QuantizationConfiguration(
@@ -211,11 +196,7 @@ if __name__ == "__main__":
         tokenization_manager.tokenizer,
         **CARED_CONFIGURATIONS.get("text_gen_config", {}),
     )
-    prompt = tokenization_manager.encode("This")
-    sequence = model_manager.infer(prompt, text_gen_config)
-    text = tokenization_manager.decode(sequence, text_gen_config)
-    logging.info(f"Generated Text Before Fine-Tuning:\n{text}")
-
+    
     # Training
     train_config = TrainerConfiguration(**CARED_CONFIGURATIONS.get("train_config", {}))
     trainer = Trainer(
