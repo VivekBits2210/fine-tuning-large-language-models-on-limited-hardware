@@ -1,9 +1,9 @@
 {
     "user_config": {
-        "env": "qlora_model_classification_SIXTH_run"
+        "env": "qlora_model_classification_almost_perfect"
     },
     "tokenizer_config": {
-        "tokenizer_name": "classification-string-label-with-many-token-sanity-fourth-try",
+        "tokenizer_name": "classification-near-perfect",
         "max_tokens": 1024
     },
     "lora_config": {
@@ -11,9 +11,9 @@
     },
     "train_config": {
         "epochs": 20,
-        "validation_interval": 10
+        "validation_interval": 2000
     },
-    "model_name": "facebook/opt-1.3b",
+    "model_name": "facebook/opt-6.7b",
     "dataset_name": "paper_abstract_topic_prediction",
-    "batch_size": 4
+    "batch_size": 2
 }

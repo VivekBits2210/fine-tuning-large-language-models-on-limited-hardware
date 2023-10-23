@@ -1,7 +1,8 @@
 import time
 import logging
+import numpy as np
 import os
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, hamming_loss
 import torch
 import wandb
 from tqdm import tqdm
@@ -182,7 +183,7 @@ class Trainer:
                 wandb.log(gpu_details)
 
         # Sample an output from the model, at each sampling interval
-        if index % self.train_config.sampling_interval == 0 and self.task=="generate":
+        if index % self.train_config.sampling_interval == 0 and self.task=="generation":
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
             text = self.tokenization_manager.decode(sequence, self.text_gen_config)
@@ -253,32 +254,60 @@ class Trainer:
     @measure_time_taken
     def validate_model_for_classification(self, epoch, index):
         logger.info("Running Validation...")
-        total_eval_loss = 0
+        loss_fn = torch.nn.BCEWithLogitsLoss()
+        total_loss = 0
         self.model_manager.model.eval()  # Ensure model is in evaluation mode
 
-        for batch in self.validation_dataloader:
+        all_preds = []
+        all_labels = []
+    
+        for batch in tqdm(self.validation_dataloader):
             with torch.no_grad():
                 batch = {k: v.to(self.model_manager.device) for k, v in batch.items()}
                 outputs = self.model_manager.model(batch['input_ids'], attention_mask=batch['attention_mask'])
-                loss, logits = outputs.loss, outputs.logits
-                total_eval_loss += loss.item()
+                logits = outputs.logits
+                loss = loss_fn(logits, batch['labels'].type_as(logits))
+                total_loss += loss.item()
+                preds = torch.sigmoid(logits) > 0.5
+                all_preds.extend(preds.cpu().numpy())
+                all_labels.extend(batch['labels'].cpu().numpy())
+    
+        # Calculate metrics
+        all_preds = np.array(all_preds)
+        all_labels = np.array(all_labels)
 
+        accuracy = accuracy_score(all_labels, all_preds)
+        f1 = f1_score(all_labels, all_preds, average='micro')  # using micro average for multi-label
+        hamming = hamming_loss(all_labels, all_preds)
+        
+        avg_eval_loss = total_loss/len(self.validation_dataloader)
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, "
             f"Validation Loss: {avg_eval_loss:.4f}, "
             f"Accuracy: {accuracy:.2f}, F1: {f1:.2f}, "
-            f"Precision: {precision:.2f}, Recall: {recall:.2f}"
+            f"Hamming Loss: {hamming:.4f}"
         )
-        with open(f"{self.log_path}/validation.log", "a") as f:
-            f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{accuracy}\t{f1}\t{precision}\t{recall}\n")
 
         metric_details = {
             "epoch": epoch + (index / len(self.training_dataloader)),
             "eval_loss": avg_eval_loss,
+            "accuracy": accuracy,
+            "hamming loss": hamming,
+            "f1": f1
         }
         store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
         if self.use_wandb:
             wandb.log(metric_details)
+            
+        LABEL_NAMES = ['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
+        for i in range(len(all_preds)):
+            pred_i =  [LABEL_NAMES[j] for j in range(len(LABEL_NAMES)) if all_preds[i][j]]
+            label_i = [LABEL_NAMES[j] for j in range(len(LABEL_NAMES)) if all_labels[i][j]]
+            logger.info(f"{i}: Predicted labels: {pred_i}")
+            logger.info(f"{i}: Actual labels: {label_i}")
+            if (i+1)%7 == 0:
+                break
+
 
     def forward_backward_pass(self, batch):
         batch = {
@@ -286,7 +315,11 @@ class Trainer:
             for k, v in batch.items()
         }
         outputs = self.model_manager.model(batch['input_ids'], attention_mask=batch['attention_mask'])
-        loss = outputs.loss
+        if self.task == "classification":
+            logits = outputs.logits
+            loss = torch.nn.BCEWithLogitsLoss()(logits, batch['labels'].type_as(logits))
+        else:
+            loss = outputs.loss
         self.running_loss += loss.item()
         loss.backward()
         self.optimizer.step()

@@ -153,7 +153,7 @@ if __name__ == "__main__":
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
 
-    df = pd.read_csv(os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")).sample(frac=0.2)
+    df = pd.read_csv(os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")) #.sample(frac=0.2)
     train_df, val_df = train_test_split(df, test_size=0.2)
     train_dataset = MultilabelDataset(train_df, tokenization_manager.tokenizer)
     val_dataset = MultilabelDataset(val_df, tokenization_manager.tokenizer)
