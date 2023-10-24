@@ -1,11 +1,15 @@
 import torch
 from torch.utils.data import Dataset
+
+
 class MultilabelDataset(Dataset):
-    def __init__(self, pandas_df, tokenizer, max_length=1024):
+    def __init__(self, pandas_df, tokenizer, max_length=1024, title_only=False):
         self.data = pandas_df
         self.tokenizer = tokenizer
         self.max_length = max_length
-        self.label_cols = ['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
+        self.title_only = title_only
+        self.label_cols = ['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology',
+                           'Quantitative Finance']
 
     def __len__(self):
         return len(self.data)
@@ -14,7 +18,7 @@ class MultilabelDataset(Dataset):
         row = self.data.iloc[index]
 
         # Join title and abstract as specified
-        text = f"{row['TITLE']}: {row['ABSTRACT']}"
+        text = f"{row['TITLE']}: {row['ABSTRACT']}" if not self.title_only else row['TITLE']
 
         # Tokenize the combined text without truncation
         full_inputs = self.tokenizer.encode_plus(
@@ -29,7 +33,7 @@ class MultilabelDataset(Dataset):
         truncated_inputs = self.tokenizer.encode_plus(
             text,
             None,
-                add_special_tokens=True,
+            add_special_tokens=True,
             max_length=self.max_length,
             padding='max_length',
             return_token_type_ids=True,
