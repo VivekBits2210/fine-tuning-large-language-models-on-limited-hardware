@@ -254,8 +254,8 @@ if __name__ == "__main__":
 
     trainer = Trainer(
         model=model_manager.model,
-        train_dataset=training_dataloader,
-        eval_dataset=validation_dataloader,
+        train_dataset=train_dataset,
+        eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
         callbacks=[CheckNanLossCallback()],
         args=TrainingArguments(warmup_steps=5,
