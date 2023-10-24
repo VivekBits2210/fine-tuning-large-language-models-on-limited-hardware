@@ -1,9 +1,9 @@
 {
     "user_config": {
-        "env": "qlora_model_classification_almost_perfect"
+        "env": "qlora_model_classification_almost_perfect_before_wandb"
     },
     "tokenizer_config": {
-        "tokenizer_name": "classification-near-perfect",
+        "tokenizer_name": "classification-near-perfect-before-wandb",
         "max_tokens": 1024
     },
     "lora_config": {
