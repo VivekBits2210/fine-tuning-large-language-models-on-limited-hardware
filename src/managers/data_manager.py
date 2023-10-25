@@ -30,7 +30,9 @@ class DataManager:
         self.tokenized_dataset = None
 
     @measure_time_taken
-    def create_dataset_from_csv_for_text_classification(self, name: str, csv_file_path: str, save_to_disk=True, topics=[]) -> None:
+    def create_dataset_from_csv_for_text_classification(
+        self, name: str, csv_file_path: str, save_to_disk=True, topics=[]
+    ) -> None:
         self.dataset_name = name
         self.dataset = load_dataset(
             "csv",
@@ -42,12 +44,24 @@ class DataManager:
 
         # Handling multi-label
         def format_multilabel(example):
-            example['labels'] = torch.tensor([example[topic] for topic in topics])
-            example['text'] = example['TITLE'] + " : " + example['ABSTRACT']
+            example["labels"] = torch.tensor([example[topic] for topic in topics])
+            example["text"] = example["TITLE"] + " : " + example["ABSTRACT"]
             return example
-        
+
         self.dataset = self.dataset.map(format_multilabel)
-        self.dataset = self.dataset.remove_columns(['ID', 'TITLE', 'ABSTRACT', 'Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance'])
+        self.dataset = self.dataset.remove_columns(
+            [
+                "ID",
+                "TITLE",
+                "ABSTRACT",
+                "Computer Science",
+                "Physics",
+                "Mathematics",
+                "Statistics",
+                "Quantitative Biology",
+                "Quantitative Finance",
+            ]
+        )
 
         print(f"DATASET LENGTH: {len(self.dataset)}")
         print(f"DATASET COLUMNS: {self.dataset.column_names}")
@@ -73,7 +87,9 @@ class DataManager:
             self.dataset.save_to_disk(self.user_config.data_path)
 
     @measure_time_taken
-    def create_tokenized_dataset(self, tokenizer, save_to_disk: bool = True, is_classification: bool = False) -> None:
+    def create_tokenized_dataset(
+        self, tokenizer, save_to_disk: bool = True, is_classification: bool = False
+    ) -> None:
         remove_columns = ["text", "meta"] if not is_classification else ["text"]
         self.tokenized_dataset = self.dataset.map(
             tokenizer,
@@ -137,7 +153,9 @@ class DataManager:
         )
 
     def set_data_collator_for_text_classification(self, tokenizer) -> None:
-        self.data_collator = DataCollatorWithPadding(tokenizer=tokenizer)  # DataCollatorForTokenClassification
+        self.data_collator = DataCollatorWithPadding(
+            tokenizer=tokenizer
+        )  # DataCollatorForTokenClassification
 
     def fetch_train_validation_split_from_disk(self):
         if not self.dataset_name:

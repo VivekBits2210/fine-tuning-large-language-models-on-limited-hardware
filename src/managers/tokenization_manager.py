@@ -47,11 +47,11 @@ class TokenizationManager:
             return_attention_mask=self.tokenization_config.return_attention_mask,
         )
         return {
-        "input_ids": tokenized_data["input_ids"],
-        "attention_mask": tokenized_data["attention_mask"],
-        "labels": data['labels'],
+            "input_ids": tokenized_data["input_ids"],
+            "attention_mask": tokenized_data["attention_mask"],
+            "labels": data["labels"],
         }
-    
+
     def encode(self, prompt: str = "This"):
         sequence = self.tokenizer(
             self.tokenizer.eos_token + prompt, return_tensors="pt"

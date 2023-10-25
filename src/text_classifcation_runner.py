@@ -86,7 +86,9 @@ if __name__ == "__main__":
     else:
         config_path = "wandb"
         wandb.init(project="qlora_finetuning")
-        CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
+        CARED_CONFIGURATIONS = nested_dict_from_flat(
+            {k: v for k, v in wandb.config.as_dict().items()}
+        )
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
 
     # Clear the GPU
@@ -145,7 +147,7 @@ if __name__ == "__main__":
     )
     run_name = generate_run_name(
         CARED_CONFIGURATIONS
-)  # using the function from db_utils
+    )  # using the function from db_utils
     logger.info(f"Starting run name {run_name}...")
     store_cared_configurations(DB_PATH, GOD_TAG, CARED_CONFIGURATIONS)
 
@@ -153,23 +155,27 @@ if __name__ == "__main__":
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
 
-    df = pd.read_csv(os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")).sample(frac=CARED_CONFIGURATIONS['keep_fraction'])
+    df = pd.read_csv(
+        os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")
+    ).sample(frac=CARED_CONFIGURATIONS["keep_fraction"])
     train_df, val_df = train_test_split(df, test_size=0.2)
     train_dataset = MultilabelDataset(train_df, tokenization_manager.tokenizer)
     val_dataset = MultilabelDataset(val_df, tokenization_manager.tokenizer)
     training_dataloader = DataLoader(
         train_dataset,
         sampler=RandomSampler(train_dataset),
-        batch_size=CARED_CONFIGURATIONS["batch_size"]
+        batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
     validation_dataloader = DataLoader(
         val_dataset,
         sampler=SequentialSampler(val_dataset),
-        batch_size=CARED_CONFIGURATIONS["batch_size"]
+        batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
-    logger.info(f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
-                f"{monitor.get_gpu_utilization()} MB")
-    
+    logger.info(
+        f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
+        f"{monitor.get_gpu_utilization()} MB"
+    )
+
     # Quantization
     # TOASS: Is bfloat available?
     quantization_config = QuantizationConfiguration(
@@ -183,10 +189,12 @@ if __name__ == "__main__":
         CARED_CONFIGURATIONS["model_name"],
         quantization_configuration=quantization_config,
         style="classification",
-        num_labels=6
+        num_labels=6,
     )
-    logger.info(f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
-                f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
+    logger.info(
+        f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} MB"
+    )
 
     # LoRA
     # TOASS: Is the rest of the model frozen
@@ -196,8 +204,10 @@ if __name__ == "__main__":
         **CARED_CONFIGURATIONS.get("lora_config", {})
     )
     model_manager.lorify(lora_configuration, module_style="qlora")
-    logger.info(f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
-                f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
+    logger.info(
+        f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} MB"
+    )
     logger.info(f"Model:\n {model_manager.model}")
 
     # Text Generation
@@ -205,7 +215,7 @@ if __name__ == "__main__":
         tokenization_manager.tokenizer,
         **CARED_CONFIGURATIONS.get("text_gen_config", {}),
     )
-    
+
     # Training
     model_manager.model.config.problem_type = "multi_label_classification"
     train_config = TrainerConfiguration(**CARED_CONFIGURATIONS.get("train_config", {}))
@@ -224,6 +234,6 @@ if __name__ == "__main__":
         database_path=DB_PATH,
         run_name=run_name,
         use_wandb=config_path == "wandb",
-        task="classification"
+        task="classification",
     )
     trainer.train()

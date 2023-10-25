@@ -2,7 +2,12 @@ import logging
 import torch
 from tqdm import tqdm
 from typing import Optional
-from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoConfig, BitsAndBytesConfig
+from transformers import (
+    AutoModelForCausalLM,
+    AutoModelForSequenceClassification,
+    AutoConfig,
+    BitsAndBytesConfig,
+)
 from peft import get_peft_model, LoraConfig
 import bitsandbytes as bnb
 from utilities.profiler_utils import measure_time_taken
@@ -23,9 +28,14 @@ class ModelManager:
         self.model = AutoModelForCausalLM.from_pretrained(load_path)
         self.__augment_model()
 
-    def load(self, model_name: str, quantization_configuration=None, style="causal", num_labels=None) -> None:
+    def load(
+        self,
+        model_name: str,
+        quantization_configuration=None,
+        style="causal",
+        num_labels=None,
+    ) -> None:
         self.model_name = model_name
-
 
         if not quantization_configuration:
             if style == "causal":
@@ -34,7 +44,9 @@ class ModelManager:
                     self.model_name, config=configuration
                 )
             elif style == "classification":
-                configuration = AutoConfig.from_pretrained(self.model_name, num_labels = num_labels)
+                configuration = AutoConfig.from_pretrained(
+                    self.model_name, num_labels=num_labels
+                )
                 self.model = AutoModelForSequenceClassification.from_pretrained(
                     self.model_name, config=configuration
                 )
@@ -53,12 +65,20 @@ class ModelManager:
             if style == "causal":
                 configuration = AutoConfig.from_pretrained(self.model_name)
                 self.model = AutoModelForCausalLM.from_pretrained(
-                    self.model_name, config=configuration, device_map="auto", quantization_config=quantization_config
+                    self.model_name,
+                    config=configuration,
+                    device_map="auto",
+                    quantization_config=quantization_config,
                 )
             elif style == "classification":
-                configuration = AutoConfig.from_pretrained(self.model_name, num_labels = num_labels)
+                configuration = AutoConfig.from_pretrained(
+                    self.model_name, num_labels=num_labels
+                )
                 self.model = AutoModelForSequenceClassification.from_pretrained(
-                    self.model_name, config=configuration, device_map="auto", quantization_config=quantization_config,
+                    self.model_name,
+                    config=configuration,
+                    device_map="auto",
+                    quantization_config=quantization_config,
                 )
             else:
                 raise Exception("Model style not recognized!")

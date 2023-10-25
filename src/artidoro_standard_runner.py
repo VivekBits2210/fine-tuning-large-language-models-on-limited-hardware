@@ -17,7 +17,13 @@ import wandb
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-from transformers import Trainer, TrainerCallback, TrainingArguments, IntervalStrategy, DataCollatorWithPadding
+from transformers import (
+    Trainer,
+    TrainerCallback,
+    TrainingArguments,
+    IntervalStrategy,
+    DataCollatorWithPadding,
+)
 
 from config import (
     UserConfiguration,
@@ -94,7 +100,9 @@ if __name__ == "__main__":
     else:
         config_path = "wandb"
         wandb.init(project="qlora_finetuning")
-        CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
+        CARED_CONFIGURATIONS = nested_dict_from_flat(
+            {k: v for k, v in wandb.config.as_dict().items()}
+        )
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
 
     # Clear the GPU
@@ -161,20 +169,25 @@ if __name__ == "__main__":
     data_manager = DataManager(user_config, system_config, tokenizer_config)
     data_manager.dataset_name = CARED_CONFIGURATIONS["dataset_name"]
 
-    df = pd.read_csv(os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")).sample(
-        frac=CARED_CONFIGURATIONS['keep_fraction'])
+    df = pd.read_csv(
+        os.path.join(user_config.cache_path, f"{data_manager.dataset_name}.csv")
+    ).sample(frac=CARED_CONFIGURATIONS["keep_fraction"])
     train_df, val_df = train_test_split(df, test_size=0.2)
-    train_dataset = MultilabelDataset(train_df, tokenization_manager.tokenizer, title_only=True)
-    val_dataset = MultilabelDataset(val_df, tokenization_manager.tokenizer, title_only=True)
+    train_dataset = MultilabelDataset(
+        train_df, tokenization_manager.tokenizer, title_only=True
+    )
+    val_dataset = MultilabelDataset(
+        val_df, tokenization_manager.tokenizer, title_only=True
+    )
     training_dataloader = DataLoader(
         train_dataset,
         sampler=RandomSampler(train_dataset),
-        batch_size=CARED_CONFIGURATIONS["batch_size"]
+        batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
     validation_dataloader = DataLoader(
         val_dataset,
         sampler=SequentialSampler(val_dataset),
-        batch_size=CARED_CONFIGURATIONS["batch_size"]
+        batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
 
     # Quantization
@@ -190,19 +203,20 @@ if __name__ == "__main__":
         CARED_CONFIGURATIONS["model_name"],
         quantization_configuration=quantization_config,
         style="classification",
-        num_labels=6
+        num_labels=6,
     )
 
     # Training
     model_manager.model.config.problem_type = "multi_label_classification"
-    model_manager.model.config.pad_token_id = tokenization_manager.tokenizer.pad_token_id
+    model_manager.model.config.pad_token_id = (
+        tokenization_manager.tokenizer.pad_token_id
+    )
     from peft import prepare_model_for_kbit_training
 
     model_manager.model = prepare_model_for_kbit_training(model_manager.model)
     lora_configuration = LoraConfiguration()
     model_manager.lorify(lora_configuration, "qlora")
     logger.info(model_manager.model)
-
 
     class CheckNanLossCallback(TrainerCallback):
         def on_train_begin(self, args, state, control, **kwargs):
@@ -229,11 +243,10 @@ if __name__ == "__main__":
             else:
                 self.last_checkpoint = trainer.state.best_model_checkpoint
 
-
-
     def compute_metrics(p):
         import numpy as np
         from sklearn.metrics import f1_score, accuracy_score, hamming_loss
+
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
 
@@ -243,7 +256,9 @@ if __name__ == "__main__":
         accuracy = accuracy_score(labels, predictions)
 
         # Writing metrics to file
-        with open("/scratch/vgn2004/fine_tuning/standard_classification/output.txt", "a") as f:
+        with open(
+            "/scratch/vgn2004/fine_tuning/standard_classification/output.txt", "a"
+        ) as f:
             f.write(f"Micro F1: {micro_f1}\n")
             f.write(f"Hamming Score: {hamming}\n")
             f.write(f"Accuracy: {accuracy}\n")
@@ -260,20 +275,21 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
-#         callbacks=[CheckNanLossCallback()],
-        args=TrainingArguments(warmup_steps=5,
-                               num_train_epochs=5,
-                               learning_rate=2e-4,
-                               logging_strategy=IntervalStrategy.STEPS,
-                               logging_steps=500,
-                               evaluation_strategy=IntervalStrategy.STEPS,
-                               eval_steps=1000,
-                               save_strategy=IntervalStrategy.STEPS,
-                               save_steps=400,
-                               lr_scheduler_type="linear",
-                               output_dir="/scratch/vgn2004/fine_tuning/standard_classification",
-                               optim="paged_adamw_32bit",
-                               ),
+        #         callbacks=[CheckNanLossCallback()],
+        args=TrainingArguments(
+            warmup_steps=5,
+            num_train_epochs=5,
+            learning_rate=2e-4,
+            logging_strategy=IntervalStrategy.STEPS,
+            logging_steps=500,
+            evaluation_strategy=IntervalStrategy.STEPS,
+            eval_steps=1000,
+            save_strategy=IntervalStrategy.STEPS,
+            save_steps=400,
+            lr_scheduler_type="linear",
+            output_dir="/scratch/vgn2004/fine_tuning/standard_classification",
+            optim="paged_adamw_32bit",
+        ),
         data_collator=DataCollatorWithPadding(
             tokenizer=tokenization_manager.tokenizer,
         ),

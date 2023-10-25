@@ -43,6 +43,7 @@ OS_ENV_DICT = {
     "TOKENIZERS_PARALLELISM": "false",
 }
 
+
 def nested_dict_from_flat(flat_dict):
     nested_dict = {}
     for key, value in flat_dict.items():
@@ -52,6 +53,7 @@ def nested_dict_from_flat(flat_dict):
             d = d.setdefault(k, {})
         d[keys[-1]] = value
     return nested_dict
+
 
 def parse_args(argv):
     args = {}
@@ -66,13 +68,13 @@ def parse_args(argv):
             current_key = None
     if current_key is not None:
         args[current_key] = None
-    return args 
+    return args
 
 
 if __name__ == "__main__":
     args = parse_args(sys.argv)
     print(f"ARGS={args}")
-    
+
     config_path = args.get("config_path", "")
     if config_path.endswith(".json"):
         with open(config_path, "r") as f:
@@ -80,7 +82,9 @@ if __name__ == "__main__":
     else:
         config_path = "wandb"
         wandb.init(project="qlora_finetuning")
-        CARED_CONFIGURATIONS = nested_dict_from_flat({k: v for k, v in wandb.config.as_dict().items()})
+        CARED_CONFIGURATIONS = nested_dict_from_flat(
+            {k: v for k, v in wandb.config.as_dict().items()}
+        )
         logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
 
     # Clear the GPU

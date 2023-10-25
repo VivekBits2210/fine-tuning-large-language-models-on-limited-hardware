@@ -8,12 +8,12 @@ def clear_tables(db_path):
 
     try:
         # Clear (delete all rows) from the Runs, Metrics, and CheckpointPaths tables
-        cursor.execute('DELETE FROM Runs;')
-        cursor.execute('DELETE FROM Metrics;')
-        cursor.execute('DELETE FROM CheckpointPaths;')
+        cursor.execute("DELETE FROM Runs;")
+        cursor.execute("DELETE FROM Metrics;")
+        cursor.execute("DELETE FROM CheckpointPaths;")
 
-        cursor.execute('DROP TABLE IF EXISTS Metrics;')
-        cursor.execute('DROP TABLE IF EXISTS CheckpointPaths;')
+        cursor.execute("DROP TABLE IF EXISTS Metrics;")
+        cursor.execute("DROP TABLE IF EXISTS CheckpointPaths;")
 
         # Commit the changes
         conn.commit()
@@ -28,7 +28,7 @@ def clear_tables(db_path):
 
 
 # Specify your database path
-db_path = '/scratch/vgn2004/metrics.sqlite3'
+db_path = "/scratch/vgn2004/metrics.sqlite3"
 
 # Call the function to clear the tables
 clear_tables(db_path)
