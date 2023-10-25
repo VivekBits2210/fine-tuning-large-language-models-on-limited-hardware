@@ -147,7 +147,7 @@ class Trainer:
 
         current_lr = self.optimizer.param_groups[0]["lr"]
 
-        if index % 100 == 0:
+        if index % 10 == 0:
             training_loss_details = {
                 "epoch": epoch + (index / len(self.training_dataloader)),
                 "running_loss": self.running_loss / index,
@@ -161,6 +161,8 @@ class Trainer:
                 "gpu_util": self.system_monitor.get_gpu_utilization(),
                 "ram_usage": self.system_monitor.get_ram_usage(),
             }
+            logger.info(f"Running Loss at epoch {training_loss_details['epoch']}, {training_loss_details['running_loss']}")
+            logger.info(f"GPU usage at epoch {training_loss_details['epoch']}, {training_loss_details['gpu_util']} MB")
             store_metric(
                 self.database_path,
                 "training_loss_details",
@@ -277,6 +279,7 @@ class Trainer:
                 loss = loss_fn(logits, batch["labels"].type_as(logits))
                 total_loss += loss.item()
                 preds = torch.sigmoid(logits) > 0.5
+                logger.info(f"Predictions: {preds} and Actual: {batch['labels'].cpu().numpy()}")
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch["labels"].cpu().numpy())
 
@@ -292,10 +295,10 @@ class Trainer:
 
         avg_eval_loss = total_loss / len(self.validation_dataloader)
         logger.info(
-            f"Batch {index}/{len(self.training_dataloader)}, "
-            f"Validation Loss: {avg_eval_loss:.4f}, "
-            f"Accuracy: {accuracy:.2f}, F1: {f1:.2f}, "
-            f"Hamming Loss: {hamming:.4f}"
+            f"Batch {index}/{len(self.training_dataloader)}\n "
+            f"Validation Loss: {avg_eval_loss:.4f}\n "
+            f"Accuracy: {100*accuracy:.2f}, F1: {f1:.2f}\n "
+            f"Hamming Loss: {hamming:.4f}\n"
         )
 
         metric_details = {
@@ -342,7 +345,7 @@ class Trainer:
         if self.task == "classification":
             logits = outputs.logits
             loss = torch.nn.BCEWithLogitsLoss()(logits, batch["labels"].type_as(logits))
-            logger.info(f"Batch {batch}, loss {loss.item()}")
+            logger.info(f"Loss {loss.item()}")
         else:
             loss = outputs.loss
         self.running_loss += loss.item()

@@ -8,7 +8,7 @@
     },
     "train_config": {
         "epochs": 2,
-        "validation_interval": 1000,
+        "validation_interval": 100,
         "optim_bits": 8
     },
     "lora_config": {
@@ -17,8 +17,8 @@
         "lora_alpha": 128,
         "lora_dropout": 0.5
     },
-    "model_name": "facebook/opt-350m",
+    "model_name": "facebook/opt-125m",
     "dataset_name": "paper_abstract_topic_prediction",
     "batch_size": 8,
-    "keep_fraction": 1
+    "keep_fraction": 0.05
 }
