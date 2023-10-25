@@ -3,18 +3,18 @@
         "env": "qlora_model_classification_standard"
     },
     "tokenizer_config": {
-        "tokenizer_name": "classification-standard-256",
-        "max_tokens": 256
+        "tokenizer_name": "classification-standard-256-second-try",
+        "max_tokens": 512
     },
     "lora_config": {
         "task_type": "SEQ_CLS"
     },
     "train_config": {
-        "epochs": 20,
+        "epochs": 2,
         "validation_interval": 1000
     },
     "model_name": "EleutherAI/pythia-1.4b",
     "dataset_name": "paper_abstract_topic_prediction",
-    "batch_size": 4,
-    "keep_fraction": 0.3
+    "batch_size": 8,
+    "keep_fraction": 1
 }

@@ -195,6 +195,7 @@ if __name__ == "__main__":
 
     # Training
     model_manager.model.config.problem_type = "multi_label_classification"
+    model_manager.model.config.pad_token_id = tokenization_manager.tokenizer.pad_token_id
     from peft import prepare_model_for_kbit_training
 
     model_manager.model = prepare_model_for_kbit_training(model_manager.model)
@@ -209,7 +210,8 @@ if __name__ == "__main__":
 
         def on_step_end(self, args, state, control, **kwargs):
             # Check if loss is nan
-            if torch.isnan(kwargs['loss']):
+            current_loss = state.log_history[-1].get("loss", None)
+            if current_loss is not None and torch.isnan(torch.tensor(current_loss)):
                 print("Loss is NaN. Enabling debugging...")
                 # Enable debugging or any other required steps
 
@@ -226,6 +228,7 @@ if __name__ == "__main__":
                     control.should_training_stop = True
             else:
                 self.last_checkpoint = trainer.state.best_model_checkpoint
+
 
 
     def compute_metrics(p):
@@ -257,7 +260,7 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         compute_metrics=compute_metrics,
-        callbacks=[CheckNanLossCallback()],
+#         callbacks=[CheckNanLossCallback()],
         args=TrainingArguments(warmup_steps=5,
                                num_train_epochs=5,
                                learning_rate=2e-4,
