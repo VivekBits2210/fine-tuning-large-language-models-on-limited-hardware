@@ -276,9 +276,9 @@ class Trainer:
                     batch["input_ids"], attention_mask=batch["attention_mask"]
                 )
                 logits = outputs.logits
-                loss = loss_fn(logits, batch["labels"].type_as(logits))
+                preds = 1*(torch.sigmoid(logits) > 0.5)
+                loss = loss_fn(preds, batch["labels"])
                 total_loss += loss.item()
-                preds = torch.sigmoid(logits) > 0.5
                 logger.info(f"Predictions vs Actual: {list(zip(list(1*preds),list(batch['labels'])))}, Loss = {loss.item()}")
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch["labels"].cpu().numpy())
@@ -344,8 +344,7 @@ class Trainer:
         )
         if self.task == "classification":
             logits = outputs.logits
-            loss = torch.nn.BCEWithLogitsLoss()(logits, batch["labels"].type_as(logits))
-            logger.info(f"Predictions: {list(zip(list(1*(torch.sigmoid(logits) > 0.5)), list(batch['labels'])))}, Loss {loss.item()}")
+            loss = torch.nn.BCEWithLogitsLoss()(1*(torch.sigmoid(logits) > 0.5), batch["labels"])
         else:
             loss = outputs.loss
         self.running_loss += loss.item()
