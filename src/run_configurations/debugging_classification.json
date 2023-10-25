@@ -1,10 +1,10 @@
 {
     "user_config": {
-        "env": "qlora_model_classification_debugging_nan"
+        "env": "qlora_model_classification_debugging_nan_small"
     },
     "tokenizer_config": {
-        "tokenizer_name": "qlora_model_classification_debugging_nan",
-        "max_tokens": 512
+        "tokenizer_name": "qlora_model_classification_debugging_nan_small",
+        "max_tokens": 256
     },
     "train_config": {
         "epochs": 2,
