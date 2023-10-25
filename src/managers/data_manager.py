@@ -39,12 +39,12 @@ class DataManager:
             split="train",
             cache_dir=self.user_config.cache_path,
         )
+
         # Handling multi-label
         def format_multilabel(example):
             example['labels'] = torch.tensor([example[topic] for topic in topics])
             example['text'] = example['TITLE'] + " : " + example['ABSTRACT']
             return example
-
         
         self.dataset = self.dataset.map(format_multilabel)
         self.dataset = self.dataset.remove_columns(['ID', 'TITLE', 'ABSTRACT', 'Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance'])
@@ -80,8 +80,6 @@ class DataManager:
             num_proc=self.system_config.num_workers,
             remove_columns=remove_columns,
         )
-        print(f"TOKENIZED INPUT IDS SHAPE: {self.tokenized_dataset['input_ids'][0]}")
-        print(f"TOKENIZED LABELS SHAPE: {self.tokenized_dataset['labels'][0]}")
 
         if save_to_disk:
             if not self.dataset_name:
@@ -106,8 +104,6 @@ class DataManager:
         sampled_dataset = self.tokenized_dataset.shuffle(seed=random_seed).select(
             range(keep_size)
         )
-        print(f"TOKENIZED INPUT IDS SHAPE: {sampled_dataset['input_ids'][0]}")
-        print(f"TOKENIZED LABELS SHAPE: {sampled_dataset['labels'][0]}")
 
         train_size = int(split_ratio * len(sampled_dataset))
         datasets = DatasetDict(
@@ -116,10 +112,6 @@ class DataManager:
                 "valid": Dataset.from_dict(sampled_dataset[train_size:]),
             }
         )
-        for batch in datasets["train"]:
-            print(f"BATCH INPUT IDS SHAPE: {batch['input_ids'][0]}")
-            print(f"BATCH LABELS SHAPE: {batch['labels'][0]}")
-            break
 
         if save_to_disk:
             if not self.dataset_name:

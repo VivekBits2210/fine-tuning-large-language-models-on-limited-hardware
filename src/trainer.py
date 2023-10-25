@@ -24,22 +24,22 @@ logger = logging.getLogger(__name__)
 
 class Trainer:
     def __init__(
-        self,
-        user_config: UserConfiguration,
-        system_config: SystemConfiguration,
-        tokenizer_config: TokenizerConfiguration,
-        text_gen_config: TextGenConfiguration,
-        train_config: TrainerConfiguration,
-        system_monitor: SystemMonitor,
-        data_manager: DataManager,
-        model_manager: ModelManager,
-        tokenization_manager: TokenizationManager,
-        training_dataloader,
-        validation_dataloader,
-        database_path,
-        run_name,
-        use_wandb=False,
-        task="generation"
+            self,
+            user_config: UserConfiguration,
+            system_config: SystemConfiguration,
+            tokenizer_config: TokenizerConfiguration,
+            text_gen_config: TextGenConfiguration,
+            train_config: TrainerConfiguration,
+            system_monitor: SystemMonitor,
+            data_manager: DataManager,
+            model_manager: ModelManager,
+            tokenization_manager: TokenizationManager,
+            training_dataloader,
+            validation_dataloader,
+            database_path,
+            run_name,
+            use_wandb=False,
+            task="generation"
     ):
         self.task = task
         self.use_wandb = use_wandb
@@ -73,13 +73,13 @@ class Trainer:
             optimizer=self.optimizer,
             num_warmup_steps=self.train_config.num_warmup_steps,
             num_training_steps=(
-                len(self.training_dataloader) * self.train_config.epochs
+                    len(self.training_dataloader) * self.train_config.epochs
             ),
         )
         lr_scheduler_details = {
             "num_warmup_steps": self.train_config.num_warmup_steps,
             "num_training_steps": len(self.training_dataloader)
-            * self.train_config.epochs,
+                                  * self.train_config.epochs,
         }
 
         self.running_loss = 0.0
@@ -183,7 +183,7 @@ class Trainer:
                 wandb.log(gpu_details)
 
         # Sample an output from the model, at each sampling interval
-        if index % self.train_config.sampling_interval == 0 and self.task=="generation":
+        if index % self.train_config.sampling_interval == 0 and self.task == "generation":
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
             text = self.tokenization_manager.decode(sequence, self.text_gen_config)
@@ -260,7 +260,7 @@ class Trainer:
 
         all_preds = []
         all_labels = []
-    
+
         for batch in tqdm(self.validation_dataloader):
             with torch.no_grad():
                 batch = {k: v.to(self.model_manager.device) for k, v in batch.items()}
@@ -271,7 +271,7 @@ class Trainer:
                 preds = torch.sigmoid(logits) > 0.5
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch['labels'].cpu().numpy())
-    
+
         # Calculate metrics
         all_preds = np.array(all_preds)
         all_labels = np.array(all_labels)
@@ -279,8 +279,8 @@ class Trainer:
         accuracy = accuracy_score(all_labels, all_preds)
         f1 = f1_score(all_labels, all_preds, average='micro')  # using micro average for multi-label
         hamming = hamming_loss(all_labels, all_preds)
-        
-        avg_eval_loss = total_loss/len(self.validation_dataloader)
+
+        avg_eval_loss = total_loss / len(self.validation_dataloader)
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}, "
             f"Validation Loss: {avg_eval_loss:.4f}, "
@@ -298,16 +298,16 @@ class Trainer:
         store_metric(self.database_path, "validation_metrics", self.run_name, metric_details)
         if self.use_wandb:
             wandb.log(metric_details)
-            
-        LABEL_NAMES = ['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology', 'Quantitative Finance']
+
+        LABEL_NAMES = ['Computer Science', 'Physics', 'Mathematics', 'Statistics', 'Quantitative Biology',
+                       'Quantitative Finance']
         for i in range(len(all_preds)):
-            pred_i =  [LABEL_NAMES[j] for j in range(len(LABEL_NAMES)) if all_preds[i][j]]
+            pred_i = [LABEL_NAMES[j] for j in range(len(LABEL_NAMES)) if all_preds[i][j]]
             label_i = [LABEL_NAMES[j] for j in range(len(LABEL_NAMES)) if all_labels[i][j]]
             logger.info(f"{i}: Predicted labels: {pred_i}")
             logger.info(f"{i}: Actual labels: {label_i}")
-            if (i+1)%7 == 0:
+            if (i + 1) % 7 == 0:
                 break
-
 
     def forward_backward_pass(self, batch):
         batch = {
@@ -318,6 +318,7 @@ class Trainer:
         if self.task == "classification":
             logits = outputs.logits
             loss = torch.nn.BCEWithLogitsLoss()(logits, batch['labels'].type_as(logits))
+            logger.info(f"Batch {batch}, loss {loss.item()}")
         else:
             loss = outputs.loss
         self.running_loss += loss.item()
@@ -335,9 +336,13 @@ class Trainer:
 
             epoch_start_time = time.time()
             for index, batch in tqdm(
-                enumerate(self.training_dataloader, 1),
-                total=len(self.training_dataloader),
+                    enumerate(self.training_dataloader, 1),
+                    total=len(self.training_dataloader),
             ):
+                if index < 10:
+                    logger.info(f"Epoch: {epoch}, Index: {index}")
+                    logger.info(f"RAM Usage: {self.system_monitor.get_ram_usage()} MB")
+                    logger.info(f"GPU Utilization: {self.system_monitor.get_gpu_utilization()} MB")
                 self.handle_batch(epoch, index, batch)
 
             epoch_end_time = time.time()

@@ -15,6 +15,7 @@ class MultilabelDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
+        import logging
         row = self.data.iloc[index]
 
         # Join title and abstract as specified
@@ -44,7 +45,7 @@ class MultilabelDataset(Dataset):
         if len(full_inputs['input_ids']) > self.max_length:
             truncated_tokens = full_inputs['input_ids'][self.max_length:]
             truncated_text = self.tokenizer.decode(truncated_tokens, skip_special_tokens=True)
-            print(f"Text at index {index} was truncated. Truncated text: {truncated_text}")
+            logging.info(f"Text at index {index} was truncated. Truncated text: {truncated_text}")
 
         # Extract the one-hot encoded labels for the given row
         labels = row[self.label_cols].values.astype(int).tolist()
