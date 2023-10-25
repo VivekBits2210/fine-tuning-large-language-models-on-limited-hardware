@@ -162,7 +162,7 @@ class Trainer:
                 "ram_usage": self.system_monitor.get_ram_usage(),
             }
             logger.info(f"Running Loss at epoch {training_loss_details['epoch']}, {training_loss_details['running_loss']}")
-            logger.info(f"GPU usage at epoch {training_loss_details['epoch']}, {training_loss_details['gpu_util']} MB")
+            logger.info(f"GPU usage at epoch {gpu_details['epoch']}, {gpu_details['gpu_util']} MB")
             store_metric(
                 self.database_path,
                 "training_loss_details",
@@ -279,7 +279,7 @@ class Trainer:
                 loss = loss_fn(logits, batch["labels"].type_as(logits))
                 total_loss += loss.item()
                 preds = torch.sigmoid(logits) > 0.5
-                logger.info(f"Predictions: {preds} and Actual: {batch['labels'].cpu().numpy()}")
+                logger.info(f"Predictions: {list(preds)} and Actual: {list(batch['labels'])}, Loss = {loss.item()}")
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch["labels"].cpu().numpy())
 
@@ -345,7 +345,7 @@ class Trainer:
         if self.task == "classification":
             logits = outputs.logits
             loss = torch.nn.BCEWithLogitsLoss()(logits, batch["labels"].type_as(logits))
-            logger.info(f"Loss {loss.item()}")
+            logger.info(f"Logits: {logits}, Labels: {batch['labels']}, Loss {loss.item()}")
         else:
             loss = outputs.loss
         self.running_loss += loss.item()
@@ -367,11 +367,8 @@ class Trainer:
                 total=len(self.training_dataloader),
             ):
                 if index < 10:
-                    logger.info(f"Epoch: {epoch}, Index: {index}")
-                    logger.info(f"RAM Usage: {self.system_monitor.get_ram_usage()} MB")
-                    logger.info(
-                        f"GPU Utilization: {self.system_monitor.get_gpu_utilization()} MB"
-                    )
+                    logger.info(f"Epoch: {epoch}, Index: {index}, RAM Usage: {self.system_monitor.get_ram_usage()} MB, "
+                                f"GPU Utilization: {self.system_monitor.get_gpu_utilization()} MB")
                 self.handle_batch(epoch, index, batch)
 
             epoch_end_time = time.time()
