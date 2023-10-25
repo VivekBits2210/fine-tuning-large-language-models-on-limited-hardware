@@ -1,0 +1,24 @@
+{
+    "user_config": {
+        "env": "qlora_model_classification_debugging_nan"
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "qlora_model_classification_debugging_nan",
+        "max_tokens": 512
+    },
+    "train_config": {
+        "epochs": 2,
+        "validation_interval": 1000,
+        "optim_bits": 8
+    },
+    "lora_config": {
+        "task_type": "SEQ_CLS",
+        "r": 64,
+        "lora_alpha": 128,
+        "lora_dropout": 0.5
+    },
+    "model_name": "facebook/opt-350m",
+    "dataset_name": "paper_abstract_topic_prediction",
+    "batch_size": 8,
+    "keep_fraction": 1
+}
