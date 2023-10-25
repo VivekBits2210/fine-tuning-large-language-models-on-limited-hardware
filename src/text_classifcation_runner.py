@@ -115,7 +115,7 @@ if __name__ == "__main__":
     # Get initial RAM and GPU utilization
     monitor = SystemMonitor()
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
-    logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
+    logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} GB")
 
     # Setup and commit torch configurations
     torch_config = TorchConfiguration(**CARED_CONFIGURATIONS.get("torch_config", {}))
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     )
     logger.info(
         f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
-        f"{monitor.get_gpu_utilization()} MB"
+        f"{monitor.get_gpu_utilization()} GB"
     )
 
     # Quantization
@@ -184,6 +184,10 @@ if __name__ == "__main__":
 
     # Transformer
     # TOASS: Was the model quantized?
+    logger.info(
+        f"System metrics before quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+    )
     model_manager = ModelManager(system_config)
     model_manager.load(
         CARED_CONFIGURATIONS["model_name"],
@@ -193,7 +197,7 @@ if __name__ == "__main__":
     )
     logger.info(
         f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
-        f"GPU Utilization: {monitor.get_gpu_utilization()} MB"
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
     )
 
     # LoRA
@@ -206,7 +210,7 @@ if __name__ == "__main__":
     model_manager.lorify(lora_configuration, module_style="qlora")
     logger.info(
         f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
-        f"GPU Utilization: {monitor.get_gpu_utilization()} MB"
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
     )
     logger.info(f"Model:\n {model_manager.model}")
 

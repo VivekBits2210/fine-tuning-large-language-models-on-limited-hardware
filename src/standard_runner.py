@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # Get initial RAM and GPU utilization
     monitor = SystemMonitor()
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
-    logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} MB")
+    logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} GB")
 
     # Configurations
 
