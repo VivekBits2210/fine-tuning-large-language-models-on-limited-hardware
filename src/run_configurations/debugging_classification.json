@@ -20,5 +20,5 @@
     "model_name": "facebook/opt-125m",
     "dataset_name": "paper_abstract_topic_prediction",
     "batch_size": 16,
-    "keep_fraction": 0.05
+    "keep_fraction": 0.3
 }
