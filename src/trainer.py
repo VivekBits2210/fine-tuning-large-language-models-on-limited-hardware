@@ -276,10 +276,15 @@ class Trainer:
                     batch["input_ids"], attention_mask=batch["attention_mask"]
                 )
                 logits = outputs.logits
-                preds = 1*(torch.sigmoid(logits) > 0.5)
-                loss = loss_fn(preds, batch["labels"])
+                loss = loss_fn(logits, batch["labels"])
+                preds = (torch.sigmoid(logits) > 0.5)
                 total_loss += loss.item()
-                logger.info(f"Predictions vs Actual: {list(zip(list(1*preds),list(batch['labels'])))}, Loss = {loss.item()}")
+
+                for p, l in zip(list(1*preds.detach().cpu()), list(batch['labels'].detch().cpu())):
+                    pred_indices = [i for i, val in enumerate(p) if val > 0]
+                    label_indices = [i for i, val in enumerate(l) if val > 0]
+                    logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
+
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch["labels"].cpu().numpy())
 
@@ -344,9 +349,14 @@ class Trainer:
         )
         if self.task == "classification":
             logits = outputs.logits
-            loss = torch.nn.BCEWithLogitsLoss()(1*(torch.sigmoid(logits) > 0.5), batch["labels"])
+            loss = torch.nn.BCEWithLogitsLoss()(logits, batch["labels"])
+            for p, l in zip(list(1 * (torch.sigmoid(logits) > 0.5).detach().cpu()), list(batch['labels'].detch().cpu())):
+                pred_indices = [i for i, val in enumerate(p) if val > 0]
+                label_indices = [i for i, val in enumerate(l) if val > 0]
+                logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
         else:
             loss = outputs.loss
+        logger.info(f"Batch Loss: {loss.item()}")
         self.running_loss += loss.item()
         loss.backward()
         self.optimizer.step()
