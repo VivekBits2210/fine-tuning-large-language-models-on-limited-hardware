@@ -113,10 +113,7 @@ class Trainer:
             split_batches=True,
             mixed_precision="bf16",
             log_with="all",
-            project_dir=self.log_path,
-            distributed_type=DistributedType.MULTI_GPU
-            if torch.cuda.device_count() > 1
-            else DistributedType.SINGLE_GPU,
+            project_dir=self.log_path
         )
         (
             self.training_dataloader,
