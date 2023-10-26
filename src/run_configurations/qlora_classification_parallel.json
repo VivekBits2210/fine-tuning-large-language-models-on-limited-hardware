@@ -25,7 +25,7 @@
     "quantization_config": {
         "use_flash_attention_2": true
     },
-    "model_name": "tiiuae/falcon-7b",
+    "model_name": "facebook/opt-1.3b",
     "dataset_name": "paper_abstract_topic_prediction",
     "batch_size": 32,
     "keep_fraction": 0.95
