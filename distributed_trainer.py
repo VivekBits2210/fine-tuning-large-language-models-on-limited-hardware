@@ -6,7 +6,10 @@ from sklearn.metrics import accuracy_score, f1_score, hamming_loss
 import torch
 import wandb
 from tqdm import tqdm
-from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
+from transformers import (
+    get_linear_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
+)
 from accelerate import Accelerator, DistributedType
 from utilities.db_utils import store_metric, store_checkpoint
 
@@ -83,7 +86,7 @@ class Trainer:
                 optimizer=self.optimizer,
                 num_warmup_steps=self.train_config.num_warmup_steps,
                 num_training_steps=(
-                        len(self.training_dataloader) * self.train_config.epochs
+                    len(self.training_dataloader) * self.train_config.epochs
                 ),
             )
 
@@ -111,10 +114,20 @@ class Trainer:
             mixed_precision="bf16",
             log_with="all",
             project_dir=self.log_path,
-            distributed_type=DistributedType.MULTI_GPU if torch.cuda.device_count() > 1 else DistributedType.SINGLE_GPU
+            distributed_type=DistributedType.MULTI_GPU
+            if torch.cuda.device_count() > 1
+            else DistributedType.SINGLE_GPU,
         )
-        self.training_dataloader, self.validation_dataloader, self.model_manager.model, self.optimizer = self.accelerator.prepare(
-            self.training_dataloader, self.validation_dataloader, self.model_manager.model, self.optimizer
+        (
+            self.training_dataloader,
+            self.validation_dataloader,
+            self.model_manager.model,
+            self.optimizer,
+        ) = self.accelerator.prepare(
+            self.training_dataloader,
+            self.validation_dataloader,
+            self.model_manager.model,
+            self.optimizer,
         )
 
     def _fetch_optimizer(self):

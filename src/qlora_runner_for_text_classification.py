@@ -174,14 +174,14 @@ if __name__ == "__main__":
         sampler=RandomSampler(train_dataset),
         batch_size=CARED_CONFIGURATIONS["batch_size"],
         num_workers=system_config.num_workers,
-        pin_memory=True
+        pin_memory=True,
     )
     validation_dataloader = DataLoader(
         val_dataset,
         sampler=SequentialSampler(val_dataset),
         batch_size=CARED_CONFIGURATIONS["batch_size"],
         num_workers=system_config.num_workers,
-        pin_memory=True
+        pin_memory=True,
     )
     logger.info(
         f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
