@@ -81,15 +81,19 @@ if __name__ == "__main__":
 
     config_path = args.get("config_path", "")
     if config_path.endswith(".json"):
+        use_wandb = False
         with open(config_path, "r") as f:
             CARED_CONFIGURATIONS = json.load(f)
     else:
         config_path = "wandb"
+        use_wandb = True
         wandb.init(project="qlora_finetuning")
         CARED_CONFIGURATIONS = nested_dict_from_flat(
             {k: v for k, v in wandb.config.as_dict().items()}
         )
-        logging.info(f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}")
+        cared_config_log_line = f"Using CARED_CONFIGURATIONS AS: {CARED_CONFIGURATIONS}"
+        logging.info(cared_config_log_line)
+        wandb.log({"log_message": cared_config_log_line})
 
     # Clear the GPU
     torch.cuda.empty_cache()
@@ -116,6 +120,11 @@ if __name__ == "__main__":
     monitor = SystemMonitor()
     logger.info(f"RAM Usage: {monitor.get_ram_usage()} MB")
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} GB")
+    if use_wandb:
+        wandb.log({"log_message": f"RAM Usage: {monitor.get_ram_usage()} MB"})
+        wandb.log(
+            {"log_message": f"GPU Utilization: {monitor.get_gpu_utilization()} GBs"}
+        )
 
     # Setup and commit torch configurations
     torch_config = TorchConfiguration(**CARED_CONFIGURATIONS.get("torch_config", {}))
@@ -175,6 +184,13 @@ if __name__ == "__main__":
         f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
         f"{monitor.get_gpu_utilization()} GB"
     )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
+                f"{monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # Quantization
     # TOASS: Is bfloat available?
@@ -188,6 +204,14 @@ if __name__ == "__main__":
         f"System metrics before quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
     )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics before quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
+
     model_manager = ModelManager(system_config)
     model_manager.load(
         CARED_CONFIGURATIONS["model_name"],
@@ -199,6 +223,13 @@ if __name__ == "__main__":
         f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
     )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # LoRA
     # TOASS: Is the rest of the model frozen
@@ -212,7 +243,15 @@ if __name__ == "__main__":
         f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
     )
-    logger.info(f"Model:\n {model_manager.model}")
+    logger.info(model_manager.model)
+    if use_wandb:
+        wandb.log({"log_message": f"{model_manager.model}"})
+        wandb.log(
+            {
+                "log_message": f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # Text Generation
     text_gen_config = TextGenConfiguration(
@@ -237,7 +276,7 @@ if __name__ == "__main__":
         validation_dataloader=validation_dataloader,
         database_path=DB_PATH,
         run_name=run_name,
-        use_wandb=config_path == "wandb",
+        use_wandb=use_wandb,
         task="classification",
     )
     trainer.train()

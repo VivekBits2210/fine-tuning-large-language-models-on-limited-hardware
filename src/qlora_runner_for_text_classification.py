@@ -77,7 +77,7 @@ def parse_args(argv):
 
 if __name__ == "__main__":
     args = parse_args(sys.argv)
-    print(f"ARGS={args}")
+    logging.info(f"ARGS={args}")
 
     config_path = args.get("config_path", "")
     if config_path.endswith(".json"):
@@ -122,7 +122,9 @@ if __name__ == "__main__":
     logger.info(f"GPU Utilization: {monitor.get_gpu_utilization()} GB")
     if use_wandb:
         wandb.log({"log_message": f"RAM Usage: {monitor.get_ram_usage()} MB"})
-        wandb.log({"log_message": f"GPU Utilization: {monitor.get_gpu_utilization()} GBs"})
+        wandb.log(
+            {"log_message": f"GPU Utilization: {monitor.get_gpu_utilization()} GBs"}
+        )
 
     # Setup and commit torch configurations
     torch_config = TorchConfiguration(**CARED_CONFIGURATIONS.get("torch_config", {}))
@@ -178,6 +180,17 @@ if __name__ == "__main__":
         sampler=SequentialSampler(val_dataset),
         batch_size=CARED_CONFIGURATIONS["batch_size"],
     )
+    logger.info(
+        f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
+        f"{monitor.get_gpu_utilization()} GB"
+    )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
+                f"{monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # Quantization
     # TOASS: Is bfloat available?
@@ -187,6 +200,18 @@ if __name__ == "__main__":
 
     # Transformer
     # TOASS: Was the model quantized?
+    logger.info(
+        f"System metrics before quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+    )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics before quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
+
     model_manager = ModelManager(system_config)
     model_manager.load(
         CARED_CONFIGURATIONS["model_name"],
@@ -194,6 +219,17 @@ if __name__ == "__main__":
         style="classification",
         num_labels=6,
     )
+    logger.info(
+        f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+    )
+    if use_wandb:
+        wandb.log(
+            {
+                "log_message": f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # LoRA
     # TOASS: Is the rest of the model frozen
@@ -203,9 +239,19 @@ if __name__ == "__main__":
         **CARED_CONFIGURATIONS.get("lora_config", {})
     )
     model_manager.lorify(lora_configuration, module_style="qlora")
+    logger.info(
+        f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+        f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+    )
     logger.info(model_manager.model)
     if use_wandb:
         wandb.log({"log_message": f"{model_manager.model}"})
+        wandb.log(
+            {
+                "log_message": f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
+                f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
+            }
+        )
 
     # Text Generation
     text_gen_config = TextGenConfiguration(
