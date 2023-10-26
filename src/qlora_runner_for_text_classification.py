@@ -30,7 +30,6 @@ from managers import (
     TokenizationManager,
     DataManager,
 )
-from trainer import Trainer
 from utilities.db_utils import (
     create_tables,
     store_god_configurations_if_not_exists,
@@ -174,11 +173,15 @@ if __name__ == "__main__":
         train_dataset,
         sampler=RandomSampler(train_dataset),
         batch_size=CARED_CONFIGURATIONS["batch_size"],
+        num_workers=system_config.num_workers,
+        pin_memory=True
     )
     validation_dataloader = DataLoader(
         val_dataset,
         sampler=SequentialSampler(val_dataset),
         batch_size=CARED_CONFIGURATIONS["batch_size"],
+        num_workers=system_config.num_workers,
+        pin_memory=True
     )
     logger.info(
         f"System metrics after dataloaders created: RAM Usage: {monitor.get_ram_usage()} MB, GPU Utilization: "
@@ -262,6 +265,12 @@ if __name__ == "__main__":
     # Training
     model_manager.model.config.problem_type = "multi_label_classification"
     train_config = TrainerConfiguration(**CARED_CONFIGURATIONS.get("train_config", {}))
+    if not train_config.distributed:
+        from trainer import Trainer
+    else:
+        logger.info("Using Distributed Trainer...")
+        from distributed_trainer import Trainer
+
     trainer = Trainer(
         user_config=user_config,
         system_config=system_config,

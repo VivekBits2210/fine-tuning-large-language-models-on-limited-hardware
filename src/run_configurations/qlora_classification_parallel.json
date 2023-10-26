@@ -1,0 +1,32 @@
+{
+    "user_config": {
+        "env": "qlora_model_classification_parallel_1024"
+    },
+    "system_config": {
+        "num_workers": 4
+    },
+    "tokenizer_config": {
+        "tokenizer_name": "qlora_model_classification_parallel_1024",
+        "max_tokens": 1024
+    },
+    "lora_config": {
+        "task_type": "SEQ_CLS",
+        "r": 64,
+        "lora_alpha": 128,
+        "lora_dropout": 0.5
+    },
+    "train_config": {
+        "epochs": 5,
+        "optim_bits": 8,
+        "validation_interval": 1000,
+        "distributed": true,
+        "scheduler_type": "cosine"
+    },
+    "quantization_config": {
+        "use_flash_attention_2": true
+    },
+    "model_name": "tiiuae/falcon-7b",
+    "dataset_name": "paper_abstract_topic_prediction",
+    "batch_size": 32,
+    "keep_fraction": 0.95
+}

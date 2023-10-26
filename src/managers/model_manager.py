@@ -69,6 +69,7 @@ class ModelManager:
                     config=configuration,
                     device_map="auto",
                     quantization_config=quantization_config,
+                    use_flash_attention_2=quantization_configuration.use_flash_attention_2,
                 )
             elif style == "classification":
                 configuration = AutoConfig.from_pretrained(
@@ -79,6 +80,7 @@ class ModelManager:
                     config=configuration,
                     device_map="auto",
                     quantization_config=quantization_config,
+                    use_flash_attention_2=quantization_configuration.use_flash_attention_2,
                 )
             else:
                 raise Exception("Model style not recognized!")
