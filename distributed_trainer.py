@@ -98,12 +98,9 @@ class Trainer:
             )
 
         self.accelerator = Accelerator(distributed_type=DistributedType.MULTI_GPU if torch.cuda.device_count() > 1 else DistributedType.SINGLE_GPU)
-        self.model_manager.model, self.optimizer = self.accelerator.prepare(
-            self.model_manager.model, self.optimizer
+        self.training_dataloader, self.validation_dataloader, self.model_manager.model, self.optimizer = self.accelerator.prepare(
+            self.training_dataloader, self.validation_dataloader, self.model_manager.model, self.optimizer
         )
-        self.training_dataloader = self.accelerator.prepare(self.training_dataloader)
-        self.validation_dataloader = self.accelerator.prepare(self.validation_dataloader)
-
     def _fetch_optimizer(self):
         if self.model_manager.is_quantized:
             from bitsandbytes.optim import AdamW
