@@ -1,0 +1,39 @@
+project: qlora_classification
+program: qlora_runner_for_text_classification.py
+method: bayes
+metric:
+  goal: minimize
+  name: eval_loss
+parameters:
+  config_path:
+    value: "wandb"
+  user_config.env:
+    value: "big_qlora_classification_sweep"
+  tokenizer_config.tokenizer_name:
+    value: "speedup-big"
+  model_name:
+    value: "facebook/opt-1.3b"
+  dataset_name:
+    value: "paper_abstract_topic_prediction"
+  lora_config.task_type:
+    value: "SEQ_CLS"
+  tokenizer_config.max_tokens:
+    value: 256
+  tokenizer_config.tokenizer_name:
+    value: "tokenizer_classification_new"
+  keep_fraction:
+    value: 0.3
+  train_config.optim_bits:
+    value: 8
+  quantization_config.bnb_4bit_use_double_quant:
+    value: true
+  batch_size:
+    values: [ 2, 4, 8]
+  lora_config.r:
+    values: [ 32, 64, 128 ]
+  lora_config.lora_alpha:
+    values: [ 16, 32, 64, 128 ]
+  lora_config.lora_dropout:
+    values: [ 0.2, 0.25, 0.3, 0.4, 0.5]
+  train_config.lr:
+    values: [ 5e-3, 8e-3, 1e-4, 2e-4, 5e-4]

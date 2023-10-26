@@ -1,9 +1,9 @@
 {
     "user_config": {
-        "env": "qlora_model_classification_debugging_nan_large"
+        "env": "qlora_model_classification_debugging_nan_large_with_small_tok"
     },
     "tokenizer_config": {
-        "tokenizer_name": "qlora_model_classification_debugging_nan_large",
+        "tokenizer_name": "qlora_model_classification_debugging_nan_large_with_small_tokenizer",
         "max_tokens": 512
     },
     "train_config": {
@@ -19,6 +19,6 @@
     },
     "model_name": "facebook/opt-6.7b",
     "dataset_name": "paper_abstract_topic_prediction",
-    "batch_size": 4,
+    "batch_size": 2,
     "keep_fraction": 0.9
 }
