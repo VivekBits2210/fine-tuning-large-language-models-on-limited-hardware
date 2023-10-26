@@ -63,7 +63,7 @@ class ModelManager:
             logger.info(f"Quantizing the model with config as {quantization_config}")
             self.is_quantized = True
             if style == "causal":
-                configuration = AutoConfig.from_pretrained(self.model_name)
+                configuration = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
                     config=configuration,
@@ -73,7 +73,7 @@ class ModelManager:
                 )
             elif style == "classification":
                 configuration = AutoConfig.from_pretrained(
-                    self.model_name, num_labels=num_labels
+                    self.model_name, num_labels=num_labels, trust_remote_code=True
                 )
                 self.model = AutoModelForSequenceClassification.from_pretrained(
                     self.model_name,
