@@ -99,8 +99,8 @@ class ModelManager:
         )
 
     def __augment_model(self):
-        #         self.model.gradient_checkpointing_enable()
-        #         self.model.enable_input_require_grads()
+        self.model.gradient_checkpointing_enable()
+        self.model.enable_input_require_grads()
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 

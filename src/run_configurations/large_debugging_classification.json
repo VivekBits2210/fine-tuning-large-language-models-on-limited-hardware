@@ -1,9 +1,9 @@
 {
     "user_config": {
-        "env": "qlora_model_classification_debugging_nan_large_with_small_tok"
+        "env": "qlora_model_classification_debugging_nan_large_with_parameters_printed"
     },
     "tokenizer_config": {
-        "tokenizer_name": "qlora_model_classification_debugging_nan_large_with_small_tokenizer",
+        "tokenizer_name": "qlora_model_classification_debugging_with_parameters_printed",
         "max_tokens": 512
     },
     "train_config": {
@@ -15,10 +15,10 @@
         "task_type": "SEQ_CLS",
         "r": 64,
         "lora_alpha": 128,
-        "lora_dropout": 0.4
+        "lora_dropout": 0.5
     },
     "model_name": "facebook/opt-6.7b",
     "dataset_name": "paper_abstract_topic_prediction",
-    "batch_size": 2,
-    "keep_fraction": 0.9
+    "batch_size": 32,
+    "keep_fraction": 0.95
 }

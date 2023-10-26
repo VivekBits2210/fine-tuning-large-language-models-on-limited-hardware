@@ -357,16 +357,29 @@ class Trainer:
         else:
             loss = outputs.loss
         logger.info(f"Batch Loss: {loss.item()}")
-        self.running_loss += loss.item()
-        loss.backward()
-        self.optimizer.step()
-        self.lr_scheduler.step()
-        self.optimizer.zero_grad()
+               
+        if torch.isnan(loss).any() or torch.isinf(loss).any():
+            logger.error("Nan or inf found in loss!")
+            for name, param in self.model_manager.model.named_parameters():
+                if torch.isnan(param.data).any():
+                    logger.error(f"Nan found in {name} data!")
+                if torch.isnan(param.grad).any():
+                    logger.error(f"Nan found in {name} gradient!")
+                if torch.isinf(param.data).any():
+                    logger.error(f"Inf found in {name} data!")
+                if torch.isinf(param.grad).any():
+                    logger.error(f"Inf found in {name} gradient!")
+        else:
+            self.running_loss += loss.item()
+            loss.backward()
+            self.optimizer.step()
+            self.lr_scheduler.step()
+            self.optimizer.zero_grad()
 
     def train(self):
         start_time = time.time()
 
-        for epoch in tqdm(range(1, self.train_config.epochs + 1)):
+        for epoch in tqdm(range(self.train_config.epochs)):
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
 
@@ -403,7 +416,7 @@ class Trainer:
         )
         store_checkpoint(
             self.database_path,
-            self.train_config.epochs + 1,
+            self.train_config.epochs,
             self.run_name,
             self.model_path,
         )
