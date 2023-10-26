@@ -24,22 +24,22 @@ logger = logging.getLogger(__name__)
 
 class Trainer:
     def __init__(
-        self,
-        user_config: UserConfiguration,
-        system_config: SystemConfiguration,
-        tokenizer_config: TokenizerConfiguration,
-        text_gen_config: TextGenConfiguration,
-        train_config: TrainerConfiguration,
-        system_monitor: SystemMonitor,
-        data_manager: DataManager,
-        model_manager: ModelManager,
-        tokenization_manager: TokenizationManager,
-        training_dataloader,
-        validation_dataloader,
-        database_path,
-        run_name,
-        use_wandb=False,
-        task="generation",
+            self,
+            user_config: UserConfiguration,
+            system_config: SystemConfiguration,
+            tokenizer_config: TokenizerConfiguration,
+            text_gen_config: TextGenConfiguration,
+            train_config: TrainerConfiguration,
+            system_monitor: SystemMonitor,
+            data_manager: DataManager,
+            model_manager: ModelManager,
+            tokenization_manager: TokenizationManager,
+            training_dataloader,
+            validation_dataloader,
+            database_path,
+            run_name,
+            use_wandb=False,
+            task="generation",
     ):
         self.task = task
         self.use_wandb = use_wandb
@@ -73,13 +73,13 @@ class Trainer:
             optimizer=self.optimizer,
             num_warmup_steps=self.train_config.num_warmup_steps,
             num_training_steps=(
-                len(self.training_dataloader) * self.train_config.epochs
+                    len(self.training_dataloader) * self.train_config.epochs
             ),
         )
         lr_scheduler_details = {
             "num_warmup_steps": self.train_config.num_warmup_steps,
             "num_training_steps": len(self.training_dataloader)
-            * self.train_config.epochs,
+                                  * self.train_config.epochs,
         }
 
         self.running_loss = 0.0
@@ -91,6 +91,7 @@ class Trainer:
         )
         if self.use_wandb:
             wandb.log(lr_scheduler_details)
+            wandb.log({"log_message": f"Using optimizer: {type(self.optimizer).__name__}"})
 
     def _fetch_optimizer(self):
         if self.model_manager.is_quantized:
@@ -161,8 +162,14 @@ class Trainer:
                 "gpu_util": self.system_monitor.get_gpu_utilization(),
                 "ram_usage": self.system_monitor.get_ram_usage(),
             }
-            logger.info(f"Running Loss at epoch {training_loss_details['epoch']}, {training_loss_details['running_loss']}")
+            logger.info(
+                f"Running Loss at epoch {training_loss_details['epoch']}, {training_loss_details['running_loss']}")
             logger.info(f"GPU usage at epoch {gpu_details['epoch']}, {gpu_details['gpu_util']} GB")
+            if self.use_wandb:
+                wandb.log({"log_message":
+                               f"Running Loss at epoch {training_loss_details['epoch']}, "
+                               f"{training_loss_details['running_loss']}"})
+                wandb.log({"log_message": f"GPU usage at epoch {gpu_details['epoch']}, {gpu_details['gpu_util']} GB"})
             store_metric(
                 self.database_path,
                 "training_loss_details",
@@ -186,8 +193,8 @@ class Trainer:
 
         # Sample an output from the model, at each sampling interval
         if (
-            index % self.train_config.sampling_interval == 0
-            and self.task == "generation"
+                index % self.train_config.sampling_interval == 0
+                and self.task == "generation"
         ):
             prompt = self.tokenization_manager.encode("This")
             sequence = self.model_manager.infer(prompt, self.text_gen_config)
@@ -196,8 +203,9 @@ class Trainer:
                 f"Training: Epoch-{epoch} Index-{index} Loss-{self.running_loss / index}"
             )
             logger.info(f"Text:\n{text}")
-            with open(f"{self.log_path}/training.log", "a") as f:
-                f.write(f"{epoch}\t{index}\t{self.running_loss / index}\t{text}\n")
+            if self.use_wandb:
+                wandb.log({"log_message": f"Training: Epoch-{epoch} Index-{index} Loss-{self.running_loss / index}"})
+                wandb.log({"log_message": f"Text:\n{text}"})
 
             text_gen_details = {
                 "epoch": epoch + (index / len(self.training_dataloader)),
@@ -225,6 +233,8 @@ class Trainer:
     @measure_time_taken
     def save_checkpoint(self, epoch, index):
         logger.info(f"Checkpointing model at epoch={epoch} and batch={index}\n")
+        if self.use_wandb:
+            wandb.log({"log_message": f"Checkpointing model at epoch={epoch} and batch={index}\n"})
         checkpointing_path = f"{self.model_path}_{epoch}_{index}"
         store_checkpoint(
             self.database_path,
@@ -245,8 +255,9 @@ class Trainer:
             f"Batch {index}/{len(self.training_dataloader)}, Validation Loss: {avg_eval_loss:.4f}, "
             f"Perplexity: {perplexity:.2f}"
         )
-        with open(f"{self.log_path}/validation.log", "a") as f:
-            f.write(f"{epoch}\t{index}\t{avg_eval_loss}\t{perplexity}\n")
+        if self.use_wandb:
+            wandb.log({"log_message": "Running Validation..."})
+            wandb.log({"log_message": f"Epoch: {epoch + (index / len(self.training_dataloader))}, Validation Loss: {avg_eval_loss:.4f}, Perplexity: {perplexity:.2f}"})
 
         metric_details = {
             "epoch": epoch + (index / len(self.training_dataloader)),
@@ -262,6 +273,9 @@ class Trainer:
     @measure_time_taken
     def validate_model_for_classification(self, epoch, index):
         logger.info("Running Validation...")
+        if self.use_wandb:
+            wandb.log({"log_message": "Running Validation..."})
+
         loss_fn = torch.nn.BCEWithLogitsLoss()
         total_loss = 0
         self.model_manager.model.eval()  # Ensure model is in evaluation mode
@@ -280,10 +294,12 @@ class Trainer:
                 preds = (torch.sigmoid(logits) > 0.5)
                 total_loss += loss.item()
 
-                for p, l in zip(list(1*preds.detach().cpu()), list(batch['labels'].detach().cpu())):
+                for p, l in zip(list(1 * preds.detach().cpu()), list(batch['labels'].detach().cpu())):
                     pred_indices = [i for i, val in enumerate(p) if val > 0]
                     label_indices = [i for i, val in enumerate(l) if val > 0]
                     logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
+                    if self.use_wandb:
+                        wandb.log({"log_message": f"Prediction: {pred_indices}, Actual: {label_indices}"})
 
                 all_preds.extend(preds.cpu().numpy())
                 all_labels.extend(batch["labels"].cpu().numpy())
@@ -302,9 +318,14 @@ class Trainer:
         logger.info(
             f"Batch {index}/{len(self.training_dataloader)}\n "
             f"Validation Loss: {avg_eval_loss:.4f}\n "
-            f"Accuracy: {100*accuracy:.2f}, F1: {f1:.2f}\n "
+            f"Accuracy: {100 * accuracy:.2f}, F1: {f1:.2f}\n "
             f"Hamming Loss: {hamming:.4f}\n"
         )
+        if self.use_wandb:
+            wandb.log({"log_message": f"Batch {index}/{len(self.training_dataloader)}\n "
+                                      f"Validation Loss: {avg_eval_loss:.4f}\n "
+                                      f"Accuracy: {100 * accuracy:.2f}, F1: {f1:.2f}\n "
+                                      f"Hamming Loss: {hamming:.4f}\n"})
 
         metric_details = {
             "epoch": epoch + (index / len(self.training_dataloader)),
@@ -336,6 +357,9 @@ class Trainer:
             ]
             logger.info(f"{i}: Predicted labels: {pred_i}")
             logger.info(f"{i}: Actual labels: {label_i}")
+            if self.use_wandb:
+                wandb.log({"log_message": f"{i}: Predicted labels: {pred_i}"})
+                wandb.log({"log_message": f"{i}: Actual labels: {label_i}"})
             if (i + 1) % 7 == 0:
                 break
 
@@ -350,25 +374,41 @@ class Trainer:
         if self.task == "classification":
             logits = outputs.logits
             loss = torch.nn.BCEWithLogitsLoss()(logits, batch["labels"])
-            for p, l in zip(list(1 * (torch.sigmoid(logits) > 0.5).detach().cpu()), list(batch['labels'].detach().cpu())):
+            for p, l in zip(list(1 * (torch.sigmoid(logits) > 0.5).detach().cpu()),
+                            list(batch['labels'].detach().cpu())):
                 pred_indices = [i for i, val in enumerate(p) if val > 0]
                 label_indices = [i for i, val in enumerate(l) if val > 0]
                 logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
+                if self.use_wandb:
+                    wandb.log({"log_message": f"Prediction: {pred_indices}, Actual: {label_indices}"})
         else:
             loss = outputs.loss
+
         logger.info(f"Batch Loss: {loss.item()}")
-               
+        if self.use_wandb:
+            wandb.log({"log_message": f"Batch Loss: {loss.item()}"})
+
         if torch.isnan(loss).any() or torch.isinf(loss).any():
             logger.error("Nan or inf found in loss!")
+            if self.use_wandb:
+                wandb.log({"log_message": "Nan or inf found in loss!"})
             for name, param in self.model_manager.model.named_parameters():
                 if torch.isnan(param.data).any():
                     logger.error(f"Nan found in {name} data!")
+                    if self.use_wandb:
+                        wandb.log({"log_message": f"Nan found in {name} data!"})
                 if torch.isnan(param.grad).any():
                     logger.error(f"Nan found in {name} gradient!")
+                    if self.use_wandb:
+                        wandb.log({"log_message": f"Nan found in {name} gradient!"})
                 if torch.isinf(param.data).any():
                     logger.error(f"Inf found in {name} data!")
+                    if self.use_wandb:
+                        wandb.log({"log_message": f"Inf found in {name} data!"})
                 if torch.isinf(param.grad).any():
                     logger.error(f"Inf found in {name} gradient!")
+                    if self.use_wandb:
+                        wandb.log({"log_message": f"Inf found in {name} gradient!"})
         else:
             self.running_loss += loss.item()
             loss.backward()
@@ -382,11 +422,13 @@ class Trainer:
         for epoch in tqdm(range(self.train_config.epochs)):
             self.running_loss = 0.0
             logger.info(f"Starting Epoch: {epoch}/{self.train_config.epochs}")
+            if self.use_wandb:
+                wandb.log({"log_message": f"Starting Epoch: {epoch}/{self.train_config.epochs}"})
 
             epoch_start_time = time.time()
             for index, batch in tqdm(
-                enumerate(self.training_dataloader, 1),
-                total=len(self.training_dataloader),
+                    enumerate(self.training_dataloader, 1),
+                    total=len(self.training_dataloader),
             ):
                 if index < 10:
                     logger.info(f"Epoch: {epoch}, Index: {index}, RAM Usage: {self.system_monitor.get_ram_usage()} MB, "
@@ -403,6 +445,8 @@ class Trainer:
             logger.info(
                 f"Training Loss after Epoch {epoch}: {self.running_loss / self.num_batches}"
             )
+            if self.use_wandb:
+                wandb.log({"log_message": f"Training Loss after Epoch {epoch}: {self.running_loss / self.num_batches}"})
 
         end_time = time.time()
         total_time = end_time - start_time
@@ -414,6 +458,9 @@ class Trainer:
         logger.info(
             f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}"
         )
+        if self.use_wandb:
+            wandb.log({"log_message": f"Final Training Loss after {self.train_config.epochs} epochs: {self.running_loss / self.num_batches}"})
+
         store_checkpoint(
             self.database_path,
             self.train_config.epochs,
