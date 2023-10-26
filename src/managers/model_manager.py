@@ -79,8 +79,7 @@ class ModelManager:
                     self.model_name,
                     config=configuration,
                     device_map="auto",
-                    quantization_config=quantization_config,
-                    use_flash_attention_2=quantization_configuration.use_flash_attention_2,
+                    quantization_config=quantization_config
                 )
             else:
                 raise Exception("Model style not recognized!")
