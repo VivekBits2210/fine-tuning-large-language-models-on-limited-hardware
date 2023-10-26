@@ -39,13 +39,13 @@ class ModelManager:
 
         if not quantization_configuration:
             if style == "causal":
-                configuration = AutoConfig.from_pretrained(self.model_name)
+                configuration = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name, config=configuration
                 )
             elif style == "classification":
                 configuration = AutoConfig.from_pretrained(
-                    self.model_name, num_labels=num_labels
+                    self.model_name, num_labels=num_labels, trust_remote_code=True
                 )
                 self.model = AutoModelForSequenceClassification.from_pretrained(
                     self.model_name, config=configuration
