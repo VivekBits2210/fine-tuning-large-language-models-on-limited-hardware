@@ -110,9 +110,7 @@ class Trainer:
             )
 
         self.accelerator = Accelerator(
-            split_batches=True,
-            log_with="all",
-            project_dir=self.log_path
+            split_batches=True, log_with="all", project_dir=self.log_path
         )
         (
             self.training_dataloader,
@@ -123,7 +121,7 @@ class Trainer:
             self.training_dataloader,
             self.validation_dataloader,
             self.model_manager.model,
-            self.optimizer
+            self.optimizer,
         )
 
     def _fetch_optimizer(self):

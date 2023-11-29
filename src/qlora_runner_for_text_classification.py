@@ -224,7 +224,7 @@ if __name__ == "__main__":
     )
     logger.info(f"Size of model after quantization:")
     model_manager.print_trainable_parameters()
-    
+
     logger.info(
         f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"

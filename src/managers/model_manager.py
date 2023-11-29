@@ -39,7 +39,9 @@ class ModelManager:
 
         if not quantization_configuration:
             if style == "causal":
-                configuration = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
+                configuration = AutoConfig.from_pretrained(
+                    self.model_name, trust_remote_code=True
+                )
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name, config=configuration
                 )
@@ -63,7 +65,9 @@ class ModelManager:
             logger.info(f"Quantizing the model with config as {quantization_config}")
             self.is_quantized = True
             if style == "causal":
-                configuration = AutoConfig.from_pretrained(self.model_name, trust_remote_code=True)
+                configuration = AutoConfig.from_pretrained(
+                    self.model_name, trust_remote_code=True
+                )
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
                     config=configuration,
@@ -79,7 +83,7 @@ class ModelManager:
                     self.model_name,
                     config=configuration,
                     device_map="auto",
-                    quantization_config=quantization_config
+                    quantization_config=quantization_config,
                 )
             else:
                 raise Exception("Model style not recognized!")
@@ -99,11 +103,12 @@ class ModelManager:
         logger.info(
             f"Addling low-rank adapters to model with config as {self.model.peft_config}"
         )
-#         self.model.enable_input_require_grads()
+
+    #         self.model.enable_input_require_grads()
 
     def __augment_model(self):
         self.model.gradient_checkpointing_enable()
-#         self.model.enable_input_require_grads()
+        #         self.model.enable_input_require_grads()
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 
@@ -169,7 +174,7 @@ class ModelManager:
                 names = name.split(".")
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
         return sorted(lora_module_names)
-    
+
     def print_trainable_parameters(self):
         """
         Prints the number of trainable parameters in the model in millions and with reduced precision.

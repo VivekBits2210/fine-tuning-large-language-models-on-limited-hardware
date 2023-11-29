@@ -426,7 +426,7 @@ class Trainer:
             ):
                 pred_indices = [i for i, val in enumerate(p) if val > 0]
                 label_indices = [i for i, val in enumerate(l) if val > 0]
-#                 logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
+                #                 logger.info(f"Prediction: {pred_indices}, Actual: {label_indices}")
                 if self.use_wandb:
                     wandb.log(
                         {
@@ -436,7 +436,7 @@ class Trainer:
         else:
             loss = outputs.loss
 
-#         logger.info(f"Batch Loss: {loss.item()}")
+        #         logger.info(f"Batch Loss: {loss.item()}")
         if self.use_wandb:
             wandb.log({"log_message": f"Batch Loss: {loss.item()}"})
 
