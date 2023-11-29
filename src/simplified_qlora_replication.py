@@ -1,3 +1,4 @@
+import argparse
 import os
 import torch
 import gc
@@ -64,8 +65,15 @@ class Configuration:
 
         self.is_quantized = kwargs.get("is_quantized", False)
 
+    def __str__(self):
+        return "\n".join(f"{k}: {v}" for k, v in vars(self).items())
+
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fine-tuning configuration")
+    args, unknown = parser.parse_known_args()
+    kwargs = vars(args)
+
     torch.cuda.empty_cache()
     gc.collect()
 
@@ -74,7 +82,8 @@ if __name__ == "__main__":
     monitor = SystemMonitor()
     print(f"Baseline usage: {monitor.get_gpu_utilization()} GB of GPU")
 
-    config = Configuration()  # model_name_or_path="facebook/opt-1.3b")
+    config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
+    print(f"Configuration: \n{config}")
 
     if "LLama" in config.model_name_or_path:
         tokenizer = LlamaTokenizer.from_pretrained(config.model_name_or_path)
