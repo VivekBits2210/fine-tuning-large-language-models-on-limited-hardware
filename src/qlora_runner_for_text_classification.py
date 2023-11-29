@@ -222,6 +222,9 @@ if __name__ == "__main__":
         style="classification",
         num_labels=6,
     )
+    logger.info(f"Size of model after quantization:")
+    model_manager.print_trainable_parameters()
+    
     logger.info(
         f"System metrics after quantized model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"
@@ -242,6 +245,8 @@ if __name__ == "__main__":
         **CARED_CONFIGURATIONS.get("lora_config", {})
     )
     model_manager.lorify(lora_configuration, module_style="qlora")
+    logger.info(f"Size of model after tuning")
+    model_manager.print_trainable_parameters()
     logger.info(
         f"System metrics after lora-adapter model creation: RAM Usage: {monitor.get_ram_usage()} MB, "
         f"GPU Utilization: {monitor.get_gpu_utilization()} GB"

@@ -18,7 +18,8 @@
     "train_config": {
         "epochs": 5,
         "optim_bits": 8,
-        "validation_interval": 1000,
+        "validation_interval": 200,
+        "checkpointing_interval": 300,
         "distributed": true,
         "scheduler_type": "cosine"
     },
