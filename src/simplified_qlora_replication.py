@@ -3,6 +3,7 @@ import sys
 import os
 import torch
 import gc
+import logging
 import bitsandbytes
 from datasets import load_dataset
 from tqdm import tqdm
@@ -92,6 +93,7 @@ if __name__ == "__main__":
         config.scratch_path, "logs", f"{config.experiment_name}.log"
     )
     sys.stdout = open(log_file_path, "w")
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     print(f"Configuration: \n{config}")
 
     monitor = SystemMonitor()
