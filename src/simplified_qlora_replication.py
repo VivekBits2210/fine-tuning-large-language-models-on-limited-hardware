@@ -77,7 +77,9 @@ if __name__ == "__main__":
     args, unknown = parser.parse_known_args()
 
     kwargs = vars(args)
-    kwargs.update(dict((arg[0].lstrip('-'),arg[1]) for arg in zip(unknown[::2], unknown[1::2])))
+    kwargs.update(
+        dict((arg[0].lstrip("-"), arg[1]) for arg in zip(unknown[::2], unknown[1::2]))
+    )
     print(f"KWARGS: {kwargs}")
 
     torch.cuda.empty_cache()
@@ -86,8 +88,10 @@ if __name__ == "__main__":
     os.environ.update(env_vars)
 
     config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
-    log_file_path = os.path.join(config.scratch_path, "logs", f"{config.experiment_name}.log")
-    sys.stdout = open(log_file_path, 'w')
+    log_file_path = os.path.join(
+        config.scratch_path, "logs", f"{config.experiment_name}.log"
+    )
+    sys.stdout = open(log_file_path, "w")
     print(f"Configuration: \n{config}")
 
     monitor = SystemMonitor()
