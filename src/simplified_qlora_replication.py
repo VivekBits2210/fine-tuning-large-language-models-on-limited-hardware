@@ -1,4 +1,5 @@
 import argparse
+import sys
 import os
 import torch
 import gc
@@ -34,6 +35,7 @@ env_vars = {
 # Configurations
 class Configuration:
     def __init__(self, **kwargs):
+        self.experiment_name = kwargs.get("experiment_name", "default_experiment")
         self.keep_fraction = kwargs.get("keep_fraction", 0.99)
         self.test_fraction = kwargs.get("test_fraction", 0.2)
         self.scratch_path = kwargs.get("scratch_path", "/scratch/vgn2004")
@@ -71,6 +73,7 @@ class Configuration:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tuning configuration")
+    parser.add_argument("--experiment_name", type=str, default="default_experiment")
     args, unknown = parser.parse_known_args()
     kwargs = vars(args)
 
@@ -79,11 +82,13 @@ if __name__ == "__main__":
 
     os.environ.update(env_vars)
 
+    config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
+    log_file_path = os.path.join(config.scratch_path, "logs", f"{config.experiment_name}.log")
+    sys.stdout = open(log_file_path, 'w')
+    print(f"Configuration: \n{config}")
+
     monitor = SystemMonitor()
     print(f"Baseline usage: {monitor.get_gpu_utilization()} GB of GPU")
-
-    config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
-    print(f"Configuration: \n{config}")
 
     if "LLama" in config.model_name_or_path:
         tokenizer = LlamaTokenizer.from_pretrained(config.model_name_or_path)
