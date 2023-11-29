@@ -25,6 +25,10 @@ parameters:
     value: 0.9
   train_config.optim_bits:
     value: 8
+  train_config.validation_interval:
+    value: 200
+  train_config.checkpointing_interval:
+    value: 300
   quantization_config.bnb_4bit_use_double_quant:
     value: true
   batch_size:

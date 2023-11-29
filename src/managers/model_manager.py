@@ -8,7 +8,7 @@ from transformers import (
     AutoConfig,
     BitsAndBytesConfig,
 )
-from peft import get_peft_model, LoraConfig
+from peft import get_peft_model, LoraConfig, prepare_model_for_kbit_training
 import bitsandbytes as bnb
 from utilities.profiler_utils import measure_time_taken
 from config.system_configuration import SystemConfiguration
@@ -94,14 +94,16 @@ class ModelManager:
             task_type=lora_configuration.task_type,
             target_modules=self._find_lora_target_modules(module_style),
         )
+        self.model = prepare_model_for_kbit_training(self.model)
         self.model = get_peft_model(self.model, lora_config)
         logger.info(
             f"Addling low-rank adapters to model with config as {self.model.peft_config}"
         )
+#         self.model.enable_input_require_grads()
 
     def __augment_model(self):
         self.model.gradient_checkpointing_enable()
-        self.model.enable_input_require_grads()
+#         self.model.enable_input_require_grads()
         self.model.config.use_cache = False
         self.model.config.pretraining_tp = 1
 
@@ -167,3 +169,20 @@ class ModelManager:
                 names = name.split(".")
                 lora_module_names.add(names[0] if len(names) == 1 else names[-1])
         return sorted(lora_module_names)
+    
+    def print_trainable_parameters(self):
+        """
+        Prints the number of trainable parameters in the model in millions and with reduced precision.
+        """
+        trainable_params = 0
+        all_param = 0
+        for _, param in self.model.named_parameters():
+            all_param += param.numel()
+            if param.requires_grad:
+                trainable_params += param.numel()
+
+        print(
+            f"Trainable params: {trainable_params / 1e6:.2f}M | "
+            f"All params: {all_param / 1e6:.2f}M | "
+            f"Trainable %: {100 * trainable_params / all_param:.2f}%"
+        )
