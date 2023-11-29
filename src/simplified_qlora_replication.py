@@ -75,7 +75,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fine-tuning configuration")
     parser.add_argument("--experiment_name", type=str, default="default_experiment")
     args, unknown = parser.parse_known_args()
+
     kwargs = vars(args)
+    kwargs.update(dict((arg[0].lstrip('-'),arg[1]) for arg in zip(unknown[::2], unknown[1::2])))
+    print(f"KWARGS: {kwargs}")
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -162,7 +165,7 @@ if __name__ == "__main__":
     )
     model = prepare_model_for_kbit_training(model)
     model = get_peft_model(model, peft_config)
-    print(model.print_trainable_parameters())
+    model.print_trainable_parameters()
     print(model.config)
 
     dataset = load_dataset("csv", data_files=config.dataset_path)
@@ -267,7 +270,7 @@ if __name__ == "__main__":
             optimizer.step()
             lr_scheduler.step()
 
-        if exit:
+        if should_exit:
             break
 
         model.eval()
