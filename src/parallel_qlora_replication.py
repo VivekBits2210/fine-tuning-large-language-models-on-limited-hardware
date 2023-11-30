@@ -90,7 +90,7 @@ class Configuration:
         self.dataset_path = kwargs.get(
             "dataset_path",
             os.path.join(
-                self.scratch_path, "disaster_tweets.csv"
+                self.scratch_path, "fine_tuning", "datasets", "disaster_tweets.csv"
             ),
         )
         self.num_workers = kwargs.get("num_workers", 14)
