@@ -24,6 +24,7 @@ from peft import (
     TaskType,
 )
 from accelerate import Accelerator
+
 accelerator = Accelerator()
 
 env_vars = {
@@ -42,9 +43,7 @@ class Configuration:
         self.scratch_path = kwargs.get("scratch_path", "./")
         self.dataset_path = kwargs.get(
             "dataset_path",
-            os.path.join(
-                self.scratch_path, "disaster_tweets.csv"
-            ),
+            os.path.join(self.scratch_path, "disaster_tweets.csv"),
         )
         self.num_workers = kwargs.get("num_workers", 14)
         self.num_virtual_tokens = kwargs.get("num_virtual_tokens", 16)
@@ -90,9 +89,7 @@ if __name__ == "__main__":
     os.environ.update(env_vars)
 
     config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
-    log_file_path = os.path.join(
-        config.scratch_path, f"{config.experiment_name}.log"
-    )
+    log_file_path = os.path.join(config.scratch_path, f"{config.experiment_name}.log")
     sys.stdout = open(log_file_path, "w")
     print(f"Configuration: \n{config}")
 
@@ -249,7 +246,13 @@ if __name__ == "__main__":
         precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
         return precision, recall, accuracy, f1, eval_loss
 
-    model, optimizer, training_dataloader, validation_dataloader, scheduler = accelerator.prepare(
+    (
+        model,
+        optimizer,
+        training_dataloader,
+        validation_dataloader,
+        scheduler,
+    ) = accelerator.prepare(
         model, optimizer, training_dataloader, validation_dataloader, lr_scheduler
     )
 

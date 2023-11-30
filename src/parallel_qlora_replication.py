@@ -25,8 +25,10 @@ from peft import (
 from accelerate import Accelerator
 from psutil import Process
 from pynvml import (
-    nvmlInit, nvmlDeviceGetHandleByIndex,
-    nvmlDeviceGetMemoryInfo, nvmlDeviceGetCount
+    nvmlInit,
+    nvmlDeviceGetHandleByIndex,
+    nvmlDeviceGetMemoryInfo,
+    nvmlDeviceGetCount,
 )
 
 
@@ -70,13 +72,12 @@ class SystemMonitor:
         return gpu_memory_usages if gpu_memory_usages is not None else None
 
 
-
 accelerator = Accelerator()
 
 env_vars = {
+    "CUDA_VISIBLE_DEVICES": "0, 1",
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
     "TORCHDYNAMO_DISABLE": "1",
-    "TOKENIZERS_PARALLELISM": "false",
 }
 
 
@@ -296,7 +297,13 @@ if __name__ == "__main__":
         precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
         return precision, recall, accuracy, f1, eval_loss
 
-    model, optimizer, training_dataloader, validation_dataloader, scheduler = accelerator.prepare(
+    (
+        model,
+        optimizer,
+        training_dataloader,
+        validation_dataloader,
+        scheduler,
+    ) = accelerator.prepare(
         model, optimizer, training_dataloader, validation_dataloader, lr_scheduler
     )
 
