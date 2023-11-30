@@ -100,8 +100,7 @@ class Configuration:
             ),
         )
         self.num_workers = kwargs.get("num_workers", 8)
-        self.num_virtual_tokens = kwargs.get("num_virtual_tokens", 16)
-        self.batch_size = kwargs.get("batch_size", 128)
+        self.batch_size = kwargs.get("batch_size", 8)
         self.lr = kwargs.get("lr", 3e-4)
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.max_length = kwargs.get("max_length", 128)
@@ -112,8 +111,8 @@ class Configuration:
             "model_name_or_path", "NousResearch/Llama-2-7b-hf"
         )
 
-        self.r = kwargs.get("r", 64)
-        self.lora_alpha = kwargs.get("lora_alpha", 128)
+        self.r = kwargs.get("r", 16)
+        self.lora_alpha = kwargs.get("lora_alpha", 64)
         self.lora_dropout = kwargs.get("lora_dropout", 0.2)
         self.lora_bias = kwargs.get("lora_bias", "none")
         self.is_gradient_checkpointing_enabled = kwargs.get(
@@ -222,7 +221,7 @@ if __name__ == "__main__":
         lora_dropout=config.lora_dropout,
         bias=config.lora_bias,
     )
-    model = prepare_model_for_kbit_training(model)
+    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=config.is_gradient_checkpointing_enabled)
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
     print(model.config)

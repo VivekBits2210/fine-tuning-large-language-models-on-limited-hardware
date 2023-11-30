@@ -47,8 +47,7 @@ class Configuration:
             ),
         )
         self.num_workers = kwargs.get("num_workers", 14)
-        self.num_virtual_tokens = kwargs.get("num_virtual_tokens", 16)
-        self.batch_size = kwargs.get("batch_size", 128)
+        self.batch_size = kwargs.get("batch_size", 8)
         self.lr = kwargs.get("lr", 3e-4)
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.max_length = kwargs.get("max_length", 128)
@@ -58,8 +57,8 @@ class Configuration:
             "model_name_or_path", "NousResearch/Llama-2-7b-hf"
         )
 
-        self.r = kwargs.get("r", 64)
-        self.lora_alpha = kwargs.get("lora_alpha", 128)
+        self.r = kwargs.get("r", 16)
+        self.lora_alpha = kwargs.get("lora_alpha", 64)
         self.lora_dropout = kwargs.get("lora_dropout", 0.2)
         self.lora_bias = kwargs.get("lora_bias", "none")
         self.is_gradient_checkpointing_enabled = kwargs.get(
