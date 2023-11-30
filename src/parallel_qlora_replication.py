@@ -22,7 +22,8 @@ from peft import (
     LoraConfig,
     TaskType,
 )
-from accelerate import Accelerator
+from torch.distributed.fsdp.fully_sharded_data_parallel import FullOptimStateDictConfig, FullStateDictConfig
+from accelerate import Accelerator, FullyShardedDataParallelPlugin
 from psutil import Process
 from pynvml import (
     nvmlInit,
@@ -71,8 +72,12 @@ class SystemMonitor:
         gpu_memory_usages = self.get_gpu_memory_usage()
         return gpu_memory_usages if gpu_memory_usages is not None else None
 
+fsdp_plugin = FullyShardedDataParallelPlugin(
+    state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=False),
+    optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=False),
+)
 
-accelerator = Accelerator()
+accelerator = Accelerator(fsdp_plugin=fsdp_plugin)
 
 env_vars = {
     "CUDA_VISIBLE_DEVICES": "0, 1",
