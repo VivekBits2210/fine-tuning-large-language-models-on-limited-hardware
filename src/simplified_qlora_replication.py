@@ -10,6 +10,7 @@ from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 from managers import SystemMonitor
 
+from transformers import set_seed
 from transformers import LlamaForSequenceClassification, LlamaTokenizer
 from transformers import (
     AutoTokenizer,
@@ -32,10 +33,16 @@ env_vars = {
     "TOKENIZERS_PARALLELISM": "false",
 }
 
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+
+set_seed(1001)
+
 
 # Configurations
 class Configuration:
     def __init__(self, **kwargs):
+        self.device_count = torch.cuda.device_count()
         self.experiment_name = kwargs.get("experiment_name", "default_experiment")
         self.keep_fraction = kwargs.get("keep_fraction", 0.99)
         self.test_fraction = kwargs.get("test_fraction", 0.2)
@@ -52,6 +59,8 @@ class Configuration:
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.max_length = kwargs.get("max_length", 128)
         self.device = kwargs.get("device", "cuda")
+        self.device_map = kwargs.get("device_map", "auto")
+        # self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
 
         self.model_name_or_path = kwargs.get(
             "model_name_or_path", "NousResearch/Llama-2-7b-hf"
@@ -64,8 +73,11 @@ class Configuration:
         self.is_gradient_checkpointing_enabled = kwargs.get(
             "is_gradient_checkpointing_enabled", True
         )
+        self.is_gradient_accumulation_enabled = kwargs.get(
+            "is_gradient_accumulation_enabled", False
+        )
 
-        self.is_quantized = kwargs.get("is_quantized", False)
+        self.is_quantized = kwargs.get("is_quantized", True)
 
     def __str__(self):
         return "\n".join(f"{k}: {v}" for k, v in vars(self).items())
@@ -98,7 +110,7 @@ if __name__ == "__main__":
     monitor = SystemMonitor()
     print(f"Baseline usage: {monitor.get_gpu_utilization()} GB of GPU")
 
-    if "LLama" in config.model_name_or_path:
+    if "llama" in config.model_name_or_path.lower():
         tokenizer = LlamaTokenizer.from_pretrained(config.model_name_or_path)
         tokenizer.padding_side = "right"
         tokenizer.model_max_length = config.max_length
@@ -116,35 +128,45 @@ if __name__ == "__main__":
     )
 
     if config.is_quantized:
-        if "LLama" in config.model_name_or_path:
+        if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
                 device_map="auto",
                 quantization_config=quantization_config,
+                trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
                 device_map="auto",
                 quantization_config=quantization_config,
+                trust_remote_code=True
             )
+        tokenizer.add_special_tokens({
+            "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
+            "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
+            "unk_token": tokenizer.convert_ids_to_tokens(
+                model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id
+            ),
+        })
     else:
-        if "LLama" in config.model_name_or_path:
+        if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
-                config.model_name_or_path
+                config.model_name_or_path,
+                trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
-                config.model_name_or_path
+                config.model_name_or_path,
+                trust_remote_code=True
             )
-
-    model.config.pad_token_id = tokenizer.pad_token_id
 
     if config.is_gradient_checkpointing_enabled:
         model.gradient_checkpointing_enable()
         model.enable_input_require_grads()
 
     model.config.use_cache = False
+    model.config.pad_token_id = tokenizer.pad_token_id
     model.config.pretraining_tp = 1
 
     def find_all_linear_names(m):
@@ -171,7 +193,20 @@ if __name__ == "__main__":
     model = prepare_model_for_kbit_training(model)
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
+
     print(model.config)
+
+    # Print dtypes
+    dtypes = {}
+    for _, p in model.named_parameters():
+        dtype = p.dtype
+        if dtype not in dtypes: dtypes[dtype] = 0
+        dtypes[dtype] += p.numel()
+    total = 0
+    for k, v in dtypes.items():
+        total += v
+    for k, v in dtypes.items():
+        print(k, v, v / total)
 
     dataset = load_dataset("csv", data_files=config.dataset_path)
     dataset = dataset["train"].train_test_split(test_size=config.test_fraction)

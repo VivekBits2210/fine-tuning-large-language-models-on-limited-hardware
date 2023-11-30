@@ -1,5 +1,4 @@
 import argparse
-import sys
 import os
 import torch
 import gc
@@ -8,6 +7,7 @@ from datasets import load_dataset
 from tqdm import tqdm
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score
 
+from transformers import set_seed
 from transformers import LlamaForSequenceClassification, LlamaTokenizer
 from transformers import (
     AutoTokenizer,
@@ -61,7 +61,7 @@ class SystemMonitor:
             for i in range(gpu_count):
                 handle = nvmlDeviceGetHandleByIndex(i)
                 info = nvmlDeviceGetMemoryInfo(handle)
-                gpu_memory_usage.append(info.used // 1024**3)
+                gpu_memory_usage.append(info.used // 1024 ** 3)
         except Exception as e:
             print(f"Error retrieving GPU memory info: {e}")
             return None
@@ -72,6 +72,11 @@ class SystemMonitor:
         gpu_memory_usages = self.get_gpu_memory_usage()
         return gpu_memory_usages if gpu_memory_usages is not None else None
 
+
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+
+set_seed(1001)
 fsdp_plugin = FullyShardedDataParallelPlugin(
     state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=False),
     optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=False),
@@ -79,16 +84,18 @@ fsdp_plugin = FullyShardedDataParallelPlugin(
 
 accelerator = Accelerator(fsdp_plugin=fsdp_plugin)
 
-env_vars = {
-    "CUDA_VISIBLE_DEVICES": "0, 1",
-    "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
-    "TORCHDYNAMO_DISABLE": "1",
-}
+# env_vars = {
+#     "CUDA_VISIBLE_DEVICES": "0, 1",
+#     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
+#     "TORCHDYNAMO_DISABLE": "1",
+# }
+env_vars = {}
 
 
 # Configurations
 class Configuration:
     def __init__(self, **kwargs):
+        self.device_count = torch.cuda.device_count()
         self.experiment_name = kwargs.get("experiment_name", "default_experiment")
         self.keep_fraction = kwargs.get("keep_fraction", 0.99)
         self.test_fraction = kwargs.get("test_fraction", 0.2)
@@ -105,7 +112,9 @@ class Configuration:
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.max_length = kwargs.get("max_length", 128)
         self.device = kwargs.get("device", accelerator.device)
-        self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
+        self.device_map = kwargs.get("device_map", "auto")
+        self.max_gpu_memory = kwargs.get("max_gpu_memory", "45000MB")
+        # self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
 
         self.model_name_or_path = kwargs.get(
             "model_name_or_path", "NousResearch/Llama-2-7b-hf"
@@ -118,8 +127,11 @@ class Configuration:
         self.is_gradient_checkpointing_enabled = kwargs.get(
             "is_gradient_checkpointing_enabled", True
         )
+        self.is_gradient_accumulation_enabled = kwargs.get(
+            "is_gradient_accumulation_enabled", False
+        )
 
-        self.is_quantized = kwargs.get("is_quantized", False)
+        self.is_quantized = kwargs.get("is_quantized", True)
 
     def __str__(self):
         return "\n".join(f"{k}: {v}" for k, v in vars(self).items())
@@ -142,17 +154,14 @@ if __name__ == "__main__":
     os.environ.update(env_vars)
 
     config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
-    log_file_path = os.path.join(
-        config.scratch_path, "logs", f"{config.experiment_name}.log"
-    )
-    sys.stdout = open(log_file_path, "w")
     print(f"Configuration: \n{config}")
 
     monitor = SystemMonitor()
     print(f"Baseline usage: {monitor.get_gpu_utilization()} GB of GPU")
 
-    if "LLama" in config.model_name_or_path:
+    if "llama" in config.model_name_or_path.lower():
         tokenizer = LlamaTokenizer.from_pretrained(config.model_name_or_path)
+        print(f"Original tokenizer pad token: {tokenizer._pad_token}")
         tokenizer.padding_side = "right"
         tokenizer.model_max_length = config.max_length
         tokenizer.pad_token = tokenizer.unk_token
@@ -164,41 +173,49 @@ if __name__ == "__main__":
     quantization_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype="bfloat16",
+        bnb_4bit_compute_dtype="float16",
         bnb_4bit_use_double_quant=True,
     )
 
     if config.is_quantized:
-        if "LLama" in config.model_name_or_path:
+        if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
                 device_map=config.device_map,
                 quantization_config=quantization_config,
+                max_memory={i: config.max_gpu_memory for i in range(config.device_count)},
+                trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
                 device_map=config.device_map,
                 quantization_config=quantization_config,
+                trust_remote_code=True
             )
     else:
-        if "LLama" in config.model_name_or_path:
+        if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
-                config.model_name_or_path
+                config.model_name_or_path,
+                trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
-                config.model_name_or_path
+                config.model_name_or_path,
+                trust_remote_code=True
             )
-
-    model.config.pad_token_id = tokenizer.pad_token_id
 
     if config.is_gradient_checkpointing_enabled:
         model.gradient_checkpointing_enable()
         model.enable_input_require_grads()
 
     model.config.use_cache = False
+    model.config.pad_token_id = tokenizer.pad_token_id
     model.config.pretraining_tp = 1
+    model.config.torch_dtype = torch.float32
+    setattr(model, 'model_parallel', True)
+    setattr(model, 'is_parallelizable', True)
+
 
     def find_all_linear_names(m):
         cls = bitsandbytes.nn.Linear4bit
@@ -211,6 +228,7 @@ if __name__ == "__main__":
         if "lm_head" in lora_module_names:  # needed for 16-bit
             lora_module_names.remove("lm_head")
         return list(lora_module_names)
+
 
     peft_config = LoraConfig(
         target_modules=find_all_linear_names(model),
@@ -226,8 +244,21 @@ if __name__ == "__main__":
     model.print_trainable_parameters()
     print(model.config)
 
+    # Print dtypes
+    dtypes = {}
+    for _, p in model.named_parameters():
+        dtype = p.dtype
+        if dtype not in dtypes: dtypes[dtype] = 0
+        dtypes[dtype] += p.numel()
+    total = 0
+    for k, v in dtypes.items():
+        total += v
+    for k, v in dtypes.items():
+        print(k, v, v / total)
+
     dataset = load_dataset("csv", data_files=config.dataset_path)
     dataset = dataset["train"].train_test_split(test_size=config.test_fraction)
+
 
     def preprocess_function(examples):
         model_inputs = tokenizer(
@@ -235,6 +266,7 @@ if __name__ == "__main__":
         )
         model_inputs["labels"] = examples["target"]
         return model_inputs
+
 
     processed_datasets = dataset.map(
         preprocess_function,
@@ -300,6 +332,7 @@ if __name__ == "__main__":
 
         precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
         return precision, recall, accuracy, f1, eval_loss
+
 
     (
         model,
