@@ -128,8 +128,10 @@ class Configuration:
             "is_gradient_checkpointing_enabled", True
         )
         self.is_gradient_accumulation_enabled = kwargs.get(
-            "is_gradient_accumulation_enabled", False
+            "is_gradient_accumulation_enabled", True
         )
+        self.gradient_accumulation_steps = kwargs.get("gradient_accumulation_steps", self.batch_size)
+        self.batch_size = 1
 
         self.is_quantized = kwargs.get("is_quantized", True)
 
@@ -153,7 +155,7 @@ if __name__ == "__main__":
 
     os.environ.update(env_vars)
 
-    config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
+    config = Configuration(**kwargs)
     print(f"Configuration: \n{config}")
 
     monitor = SystemMonitor()
@@ -360,9 +362,12 @@ if __name__ == "__main__":
                 should_exit = True
                 break
             total_loss += loss.detach().float()
+            loss = loss / config.gradient_accumulation_steps
             accelerator.backward(loss)
-            optimizer.step()
-            lr_scheduler.step()
+            if (step + 1) % config.gradient_accumulation_steps == 0:
+                optimizer.step()
+                scheduler.step()
+                optimizer.zero_grad()
 
         if should_exit:
             break
