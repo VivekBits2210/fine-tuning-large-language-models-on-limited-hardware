@@ -23,9 +23,10 @@ from peft import (
     LoraConfig,
     TaskType,
 )
+from accelerate import Accelerator
+accelerator = Accelerator()
 
 env_vars = {
-    "CUDA_VISIBLE_DEVICES": "0",
     "TRANSFORMERS_NO_ADVISORY_WARNINGS": "true",
     "TORCHDYNAMO_DISABLE": "1",
     "TOKENIZERS_PARALLELISM": "false",
@@ -51,7 +52,8 @@ class Configuration:
         self.lr = kwargs.get("lr", 3e-4)
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.max_length = kwargs.get("max_length", 128)
-        self.device = kwargs.get("device", "cuda")
+        self.device = kwargs.get("device", accelerator.device)
+        self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
 
         self.model_name_or_path = kwargs.get(
             "model_name_or_path", "NousResearch/Llama-2-7b-hf"
@@ -118,13 +120,13 @@ if __name__ == "__main__":
         if "LLama" in config.model_name_or_path:
             model = LlamaForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
-                device_map="auto",
+                device_map=config.device_map,
                 quantization_config=quantization_config,
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
-                device_map="auto",
+                device_map=config.device_map,
                 quantization_config=quantization_config,
             )
     else:
@@ -193,19 +195,15 @@ if __name__ == "__main__":
 
     training_dataloader = torch.utils.data.DataLoader(
         processed_datasets["train"],
-        sampler=torch.utils.data.RandomSampler(processed_datasets["train"]),
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         collate_fn=DataCollatorWithPadding(tokenizer=tokenizer, padding="longest"),
-        pin_memory=True,
     )
     validation_dataloader = torch.utils.data.DataLoader(
         processed_datasets["test"],
-        sampler=torch.utils.data.SequentialSampler(processed_datasets["test"]),
         batch_size=config.batch_size,
         num_workers=config.num_workers,
         collate_fn=DataCollatorWithPadding(tokenizer=tokenizer, padding="longest"),
-        pin_memory=True,
     )
 
     optimizer = (
@@ -238,7 +236,7 @@ if __name__ == "__main__":
         eval_loss = 0.0
         with torch.no_grad():
             for data in tqdm(dataloader):
-                batch = {k: v.to(config.device) for k, v in data.items()}
+                batch = {k: v for k, v in data.items()}
                 outputs = model(**batch)
                 loss = outputs.loss
                 eval_loss += loss.detach().float()
@@ -251,8 +249,9 @@ if __name__ == "__main__":
         precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
         return precision, recall, accuracy, f1, eval_loss
 
-    if not config.is_quantized:
-        model.to(config.device)
+    model, optimizer, training_dataloader, validation_dataloader, scheduler = accelerator.prepare(
+        model, optimizer, training_dataloader, validation_dataloader, lr_scheduler
+    )
 
     should_exit = False
     for epoch in range(config.num_epochs):
@@ -262,7 +261,7 @@ if __name__ == "__main__":
             if epoch == 0 and step < 5:
                 print(f"Usage: {monitor.get_gpu_utilization()} GB of GPU")
             optimizer.zero_grad()
-            batch = {k: v.to(config.device) for k, v in batch.items()}
+            batch = {k: v for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
             if torch.isnan(loss):
@@ -270,7 +269,7 @@ if __name__ == "__main__":
                 should_exit = True
                 break
             total_loss += loss.detach().float()
-            loss.backward()
+            accelerator.backward(loss)
             optimizer.step()
             lr_scheduler.step()
 
