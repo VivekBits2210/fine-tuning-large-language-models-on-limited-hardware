@@ -93,7 +93,7 @@ class Configuration:
                 self.scratch_path, "fine_tuning", "datasets", "disaster_tweets.csv"
             ),
         )
-        self.num_workers = kwargs.get("num_workers", 14)
+        self.num_workers = kwargs.get("num_workers", 8)
         self.num_virtual_tokens = kwargs.get("num_virtual_tokens", 16)
         self.batch_size = kwargs.get("batch_size", 128)
         self.lr = kwargs.get("lr", 3e-4)
