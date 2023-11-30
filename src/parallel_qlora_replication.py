@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
     config = Configuration(**kwargs)  # model_name_or_path="facebook/opt-1.3b")
     log_file_path = os.path.join(
-        config.scratch_path, f"{config.experiment_name}.log"
+        config.scratch_path, "logs", f"{config.experiment_name}.log"
     )
     sys.stdout = open(log_file_path, "w")
     print(f"Configuration: \n{config}")
