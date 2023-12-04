@@ -166,7 +166,9 @@ if __name__ == "__main__":
         tokenizer.model_max_length = config.max_length
         tokenizer.pad_token = tokenizer.unk_token
     else:
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path,
+                                                  token="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",
+                                                  trust_remote_code=True)
         tokenizer.padding_side = "left"
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -191,6 +193,7 @@ if __name__ == "__main__":
                 config.model_name_or_path,
                 device_map=config.device_map,
                 quantization_config=quantization_config,
+                token="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",
                 trust_remote_code=True
             )
     else:

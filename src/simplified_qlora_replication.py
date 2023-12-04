@@ -57,7 +57,7 @@ class Configuration:
         self.batch_size = kwargs.get("batch_size", 8)
         self.lr = kwargs.get("lr", 3e-4)
         self.num_epochs = kwargs.get("num_epochs", 5)
-        self.max_length = kwargs.get("max_length", 128)
+        self.max_length = int(kwargs.get("max_length", 128))
         self.device = kwargs.get("device", "cuda")
         self.device_map = kwargs.get("device_map", "auto")
         # self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
