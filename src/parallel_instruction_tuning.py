@@ -446,6 +446,36 @@ lr_scheduler = get_linear_schedule_with_warmup(
 )
 
 
+def calculate_metrics(preds, labels):
+    precision = precision_score(labels, preds, average="macro")
+    recall = recall_score(labels, preds, average="macro")
+    accuracy = accuracy_score(labels, preds)
+    f1 = f1_score(labels, preds, average="macro")
+    return precision, recall, accuracy, f1
+
+
+def evaluate(dataloader):
+    model.eval()
+    all_preds = []
+    all_labels = []
+
+    eval_loss = 0.0
+    with torch.no_grad():
+        for data in tqdm(dataloader):
+            batch = {k: v for k, v in data.items()}
+            outputs = model(**batch)
+            loss = outputs.loss
+            eval_loss += loss.detach().float()
+            preds = torch.argmax(torch.softmax(outputs.logits, dim=1), dim=1)
+            labels = batch["labels"]
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
+    return precision, recall, accuracy, f1, eval_loss
+
+
 should_exit = False
 for epoch in range(config.num_epochs):
     model.train()
