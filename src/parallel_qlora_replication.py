@@ -22,7 +22,10 @@ from peft import (
     LoraConfig,
     TaskType,
 )
-from torch.distributed.fsdp.fully_sharded_data_parallel import FullOptimStateDictConfig, FullStateDictConfig
+from torch.distributed.fsdp.fully_sharded_data_parallel import (
+    FullOptimStateDictConfig,
+    FullStateDictConfig,
+)
 from accelerate import Accelerator, FullyShardedDataParallelPlugin
 from psutil import Process
 from pynvml import (
@@ -61,7 +64,7 @@ class SystemMonitor:
             for i in range(gpu_count):
                 handle = nvmlDeviceGetHandleByIndex(i)
                 info = nvmlDeviceGetMemoryInfo(handle)
-                gpu_memory_usage.append(info.used // 1024 ** 3)
+                gpu_memory_usage.append(info.used // 1024**3)
         except Exception as e:
             print(f"Error retrieving GPU memory info: {e}")
             return None
@@ -79,7 +82,9 @@ if torch.cuda.is_available():
 set_seed(1001)
 fsdp_plugin = FullyShardedDataParallelPlugin(
     state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=False),
-    optim_state_dict_config=FullOptimStateDictConfig(offload_to_cpu=True, rank0_only=False),
+    optim_state_dict_config=FullOptimStateDictConfig(
+        offload_to_cpu=True, rank0_only=False
+    ),
 )
 
 accelerator = Accelerator(fsdp_plugin=fsdp_plugin)
@@ -130,7 +135,9 @@ class Configuration:
         self.is_gradient_accumulation_enabled = kwargs.get(
             "is_gradient_accumulation_enabled", True
         )
-        self.gradient_accumulation_steps = kwargs.get("gradient_accumulation_steps", self.batch_size)
+        self.gradient_accumulation_steps = kwargs.get(
+            "gradient_accumulation_steps", self.batch_size
+        )
         self.batch_size = 1
 
         self.is_quantized = kwargs.get("is_quantized", True)
@@ -168,9 +175,11 @@ if __name__ == "__main__":
         tokenizer.model_max_length = config.max_length
         tokenizer.pad_token = tokenizer.unk_token
     else:
-        tokenizer = AutoTokenizer.from_pretrained(config.model_name_or_path,
-                                                  token="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",
-                                                  trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(
+            config.model_name_or_path,
+            token="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",
+            trust_remote_code=True,
+        )
         tokenizer.padding_side = "left"
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -187,8 +196,10 @@ if __name__ == "__main__":
                 config.model_name_or_path,
                 device_map=config.device_map,
                 quantization_config=quantization_config,
-                max_memory={i: config.max_gpu_memory for i in range(config.device_count)},
-                trust_remote_code=True
+                max_memory={
+                    i: config.max_gpu_memory for i in range(config.device_count)
+                },
+                trust_remote_code=True,
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
@@ -196,18 +207,16 @@ if __name__ == "__main__":
                 device_map=config.device_map,
                 quantization_config=quantization_config,
                 token="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",
-                trust_remote_code=True
+                trust_remote_code=True,
             )
     else:
         if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
-                config.model_name_or_path,
-                trust_remote_code=True
+                config.model_name_or_path, trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
-                config.model_name_or_path,
-                trust_remote_code=True
+                config.model_name_or_path, trust_remote_code=True
             )
 
     if config.is_gradient_checkpointing_enabled:
@@ -218,9 +227,8 @@ if __name__ == "__main__":
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.pretraining_tp = 1
     model.config.torch_dtype = torch.float32
-    setattr(model, 'model_parallel', True)
-    setattr(model, 'is_parallelizable', True)
-
+    setattr(model, "model_parallel", True)
+    setattr(model, "is_parallelizable", True)
 
     def find_all_linear_names(m):
         cls = bitsandbytes.nn.Linear4bit
@@ -234,7 +242,6 @@ if __name__ == "__main__":
             lora_module_names.remove("lm_head")
         return list(lora_module_names)
 
-
     peft_config = LoraConfig(
         target_modules=find_all_linear_names(model),
         task_type=TaskType.SEQ_CLS,
@@ -244,7 +251,9 @@ if __name__ == "__main__":
         lora_dropout=config.lora_dropout,
         bias=config.lora_bias,
     )
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=config.is_gradient_checkpointing_enabled)
+    model = prepare_model_for_kbit_training(
+        model, use_gradient_checkpointing=config.is_gradient_checkpointing_enabled
+    )
     model = get_peft_model(model, peft_config)
     model.print_trainable_parameters()
     print(model.config)
@@ -253,7 +262,8 @@ if __name__ == "__main__":
     dtypes = {}
     for _, p in model.named_parameters():
         dtype = p.dtype
-        if dtype not in dtypes: dtypes[dtype] = 0
+        if dtype not in dtypes:
+            dtypes[dtype] = 0
         dtypes[dtype] += p.numel()
     total = 0
     for k, v in dtypes.items():
@@ -264,14 +274,12 @@ if __name__ == "__main__":
     dataset = load_dataset("csv", data_files=config.dataset_path)
     dataset = dataset["train"].train_test_split(test_size=config.test_fraction)
 
-
     def preprocess_function(examples):
         model_inputs = tokenizer(
             examples["text"], max_length=config.max_length, truncation=True
         )
         model_inputs["labels"] = examples["target"]
         return model_inputs
-
 
     processed_datasets = dataset.map(
         preprocess_function,
@@ -337,7 +345,6 @@ if __name__ == "__main__":
 
         precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
         return precision, recall, accuracy, f1, eval_loss
-
 
     (
         model,
