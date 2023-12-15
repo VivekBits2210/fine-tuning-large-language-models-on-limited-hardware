@@ -48,6 +48,7 @@ gc.collect()
 os.environ["TRANSFORMERS_NO_ADVISORY_WARNINGS"] = "true"
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
+
 class SystemMonitor:
     def __init__(self):
         # Initialize NVML for GPU monitoring
@@ -76,7 +77,7 @@ class SystemMonitor:
             for i in range(gpu_count):
                 handle = nvmlDeviceGetHandleByIndex(i)
                 info = nvmlDeviceGetMemoryInfo(handle)
-                gpu_memory_usage.append(info.used // 1024**3)
+                gpu_memory_usage.append(info.used // 1024 ** 3)
         except Exception as e:
             print(f"Error retrieving GPU memory info: {e}")
             return None
@@ -90,7 +91,6 @@ class SystemMonitor:
 
 monitor = SystemMonitor()
 print(f"Baseline usage: {monitor.get_gpu_utilization()} GB of GPU")
-
 
 if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -257,7 +257,6 @@ model_config.bos_token_id = tokenizer.bos_token_id
 model_config.eos_token_id = tokenizer.eos_token_id
 model_config.pad_token_id = tokenizer.pad_token_id
 
-
 quantization_config = BitsAndBytesConfig(
     load_in_4bit=True,
     bnb_4bit_quant_type="nf4",
@@ -400,6 +399,36 @@ def _add_text(rec):
     return rec
 
 
+def calculate_metrics(preds, labels):
+    precision = precision_score(labels, preds, average="macro")
+    recall = recall_score(labels, preds, average="macro")
+    accuracy = accuracy_score(labels, preds)
+    f1 = f1_score(labels, preds, average="macro")
+    return precision, recall, accuracy, f1
+
+
+def evaluate(dataloader):
+    model.eval()
+    all_preds = []
+    all_labels = []
+
+    eval_loss = 0.0
+    with torch.no_grad():
+        for data in tqdm(dataloader):
+            batch = {k: v for k, v in data.items()}
+            outputs = model(**batch)
+            loss = outputs.loss
+            eval_loss += loss.detach().float()
+            preds = torch.argmax(torch.softmax(outputs.logits, dim=1), dim=1)
+            labels = batch["labels"]
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
+    precision, recall, accuracy, f1 = calculate_metrics(all_preds, all_labels)
+    return precision, recall, accuracy, f1, eval_loss
+
+
 dataset = dataset.map(_add_text)
 processed_dataset = preprocess_dataset(
     tokenizer=tokenizer, max_length=config.seq_length, dataset=dataset
@@ -424,7 +453,6 @@ validation_dataloader = torch.utils.data.DataLoader(
     collate_fn=data_collator,
 )
 
-
 optimizer = (
     torch.optim.AdamW(model.parameters(), lr=config.lr)
     if not config.is_quantized
@@ -447,7 +475,6 @@ lr_scheduler = get_linear_schedule_with_warmup(
 ) = accelerator.prepare(
     model, optimizer, training_dataloader, validation_dataloader, lr_scheduler
 )
-
 
 should_exit = False
 for epoch in range(config.num_epochs):
