@@ -133,32 +133,34 @@ if __name__ == "__main__":
                 config.model_name_or_path,
                 device_map="auto",
                 quantization_config=quantization_config,
-                trust_remote_code=True
+                trust_remote_code=True,
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
                 config.model_name_or_path,
                 device_map="auto",
                 quantization_config=quantization_config,
-                trust_remote_code=True
+                trust_remote_code=True,
             )
-        tokenizer.add_special_tokens({
-            "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
-            "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
-            "unk_token": tokenizer.convert_ids_to_tokens(
-                model.config.pad_token_id if model.config.pad_token_id != -1 else tokenizer.pad_token_id
-            ),
-        })
+        tokenizer.add_special_tokens(
+            {
+                "eos_token": tokenizer.convert_ids_to_tokens(model.config.eos_token_id),
+                "bos_token": tokenizer.convert_ids_to_tokens(model.config.bos_token_id),
+                "unk_token": tokenizer.convert_ids_to_tokens(
+                    model.config.pad_token_id
+                    if model.config.pad_token_id != -1
+                    else tokenizer.pad_token_id
+                ),
+            }
+        )
     else:
         if "llama" in config.model_name_or_path.lower():
             model = LlamaForSequenceClassification.from_pretrained(
-                config.model_name_or_path,
-                trust_remote_code=True
+                config.model_name_or_path, trust_remote_code=True
             )
         else:
             model = AutoModelForSequenceClassification.from_pretrained(
-                config.model_name_or_path,
-                trust_remote_code=True
+                config.model_name_or_path, trust_remote_code=True
             )
 
     if config.is_gradient_checkpointing_enabled:
@@ -200,7 +202,8 @@ if __name__ == "__main__":
     dtypes = {}
     for _, p in model.named_parameters():
         dtype = p.dtype
-        if dtype not in dtypes: dtypes[dtype] = 0
+        if dtype not in dtypes:
+            dtypes[dtype] = 0
         dtypes[dtype] += p.numel()
     total = 0
     for k, v in dtypes.items():
