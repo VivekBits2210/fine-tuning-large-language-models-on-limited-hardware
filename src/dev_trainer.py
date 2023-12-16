@@ -1,8 +1,7 @@
 import functools
 from functools import partial
 
-# import fastckpt before transformers
-from lightseq.lightseq_ckpt_monkey_patch import replace_hf_ckpt_with_new_ckpt, clear_all_buffers_at_the_end_of_training
+# from lightseq.lightseq_ckpt_monkey_patch import replace_hf_ckpt_with_new_ckpt, clear_all_buffers_at_the_end_of_training
 # replace_hf_ckpt_with_new_ckpt()
 
 from transformers.trainer_pt_utils import LabelSmoother
@@ -540,4 +539,3 @@ for epoch in range(config.num_epochs):
     print(f"{epoch=}: {train_ppl=} {train_epoch_loss=} {eval_ppl=} {eval_epoch_loss=}")
 
 reset_global_memory_buffer()
-clear_all_buffers_at_the_end_of_training()
