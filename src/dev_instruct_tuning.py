@@ -10,16 +10,12 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_sc
 
 from transformers import set_seed
 from transformers import (
-    LlamaForCausalLM,
-    LlamaTokenizer,
     AutoModelForCausalLM,
     AutoConfig,
 )
 from transformers import (
     AutoTokenizer,
     get_linear_schedule_with_warmup,
-    DataCollatorWithPadding,
-    DataCollatorForSeq2Seq,
     DataCollatorForLanguageModeling,
 )
 from transformers import BitsAndBytesConfig
