@@ -1,4 +1,18 @@
-import argparse
+import functools
+from functools import partial
+
+# import fastckpt before transformers
+from lightseq.lightseq_ckpt_monkey_patch import replace_hf_ckpt_with_new_ckpt, clear_all_buffers_at_the_end_of_training
+# replace_hf_ckpt_with_new_ckpt()
+
+from transformers.trainer_pt_utils import LabelSmoother
+from torch.distributed.fsdp.fully_sharded_data_parallel import ShardingStrategy
+from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
+from transformers.trainer_pt_utils import get_module_class_from_name
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+import torch.distributed as dist
+from lightseq.async_communication import reset_global_memory_buffer
+
 import os
 import torch
 import gc
@@ -24,11 +38,6 @@ from peft import (
     LoraConfig,
     TaskType, get_peft_model,
 )
-from torch.distributed.fsdp.fully_sharded_data_parallel import (
-    FullOptimStateDictConfig,
-    FullStateDictConfig,
-)
-from accelerate import Accelerator, FullyShardedDataParallelPlugin
 from psutil import Process
 from pynvml import (
     nvmlInit,
@@ -91,20 +100,14 @@ if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
 
 set_seed(1001)
-fsdp_plugin = FullyShardedDataParallelPlugin(
-    state_dict_config=FullStateDictConfig(offload_to_cpu=True, rank0_only=False),
-    optim_state_dict_config=FullOptimStateDictConfig(
-        offload_to_cpu=True, rank0_only=False
-    ),
-)
 
-accelerator = Accelerator(fsdp_plugin=fsdp_plugin)
+IGNORE_TOKEN_ID = LabelSmoother.ignore_index
 
 
 class Configuration:
     def __init__(self, **kwargs):
         self.device_count = torch.cuda.device_count()
-        self.experiment_name = kwargs.get("experiment_name", "default_experiment")
+        self.experiment_name = kwargs.get("experiment_name", "default_seq_parallel_experiment")
         self.keep_fraction = kwargs.get("keep_fraction", 0.99)
         self.test_fraction = kwargs.get("test_fraction", 0.2)
         self.scratch_path = kwargs.get("scratch_path", "/scratch/vgn2004")
@@ -113,7 +116,7 @@ class Configuration:
         self.lr = kwargs.get("lr", 3e-4)
         self.num_epochs = kwargs.get("num_epochs", 5)
         self.seq_length = kwargs.get("seq_length", 1024)
-        self.device = kwargs.get("device", accelerator.device)
+        # self.device = kwargs.get("device", accelerator.device)
         self.device_map = kwargs.get("device_map", "auto")
         self.max_gpu_memory = kwargs.get("max_gpu_memory", "45080MB")
         # self.device_map = kwargs.get("device_map", {"": accelerator.process_index})
@@ -143,19 +146,13 @@ class Configuration:
         return "\n".join(f"{k}: {v}" for k, v in vars(self).items())
 
 
-parser = argparse.ArgumentParser(description="Fine-tuning configuration")
-parser.add_argument("--experiment_name", type=str, default="default_experiment")
-args, unknown = parser.parse_known_args()
+def rank0_print(*args):
+    print(*args)
 
-kwargs = vars(args)
-kwargs.update(
-    dict((arg[0].lstrip("-"), arg[1]) for arg in zip(unknown[::2], unknown[1::2]))
-)
-print(f"KWARGS: {kwargs}")
 
 torch.cuda.empty_cache()
 gc.collect()
-config = Configuration(**kwargs)
+config = Configuration()
 print(f"Configuration: \n{config}")
 
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
@@ -305,6 +302,7 @@ model = prepare_model_for_kbit_training(
 )
 model = get_peft_model(model, peft_config)
 
+
 class DataCollatorForCompletionOnlyLM(DataCollatorForLanguageModeling):
     def torch_call(self, examples):
         batch = super().torch_call(examples)
@@ -430,6 +428,44 @@ print("Test data size: ", split_dataset["test"].num_rows)
 data_collator = DataCollatorForCompletionOnlyLM(
     tokenizer=tokenizer, mlm=False, return_tensors="pt", pad_to_multiple_of=8
 )
+
+
+def initialize_distributed():
+    if dist.is_initialized():
+        if dist.get_rank() == 0:
+            print(
+                "torch distributed is already initialized, "
+                "skipping initialization ...",
+                flush=True,
+            )
+    else:
+        if int(os.environ["RANK"]) == 0:
+            print("Initializing Torch distributed.")
+        dist.init_process_group(backend="nccl")
+        local_world_size = int(os.environ["LOCAL_WORLD_SIZE"])
+        global_world_size = dist.get_world_size()
+        torch.cuda.set_device(dist.get_rank() % local_world_size)
+
+
+initialize_distributed()
+transformer_cls_to_wrap = set()
+transformer_cls = get_module_class_from_name(model, "LlamaDecoderLayer")
+if transformer_cls is None:
+    raise Exception("Could not find the transformer layer class to wrap in the model.")
+else:
+    transformer_cls_to_wrap.add(transformer_cls)
+    print(f"Wrapping: {transformer_cls_to_wrap}")
+    auto_wrap_policy = functools.partial(
+        transformer_auto_wrap_policy,
+        transformer_layer_cls=transformer_cls_to_wrap,
+    )
+
+model = FSDP(
+    model,
+    auto_wrap_policy=auto_wrap_policy,
+    sharding_strategy=ShardingStrategy.FULL_SHARD
+)
+
 training_dataloader = torch.utils.data.DataLoader(
     split_dataset["train"],
     batch_size=config.batch_size,
@@ -443,6 +479,17 @@ validation_dataloader = torch.utils.data.DataLoader(
     collate_fn=data_collator,
 )
 
+# no_decay = ["bias", "LayerNorm.weight"]
+# optimizer_grouped_parameters = [
+#     {
+#         "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+#         "weight_decay": 0.01,
+#     },
+#     {
+#         "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+#         "weight_decay": 0.0,
+#     },
+# ]
 optimizer = (
     torch.optim.AdamW(model.parameters(), lr=config.lr)
     if not config.is_quantized
@@ -456,16 +503,6 @@ lr_scheduler = get_linear_schedule_with_warmup(
     num_training_steps=(len(training_dataloader) * config.num_epochs),
 )
 
-(
-    model,
-    optimizer,
-    training_dataloader,
-    validation_dataloader,
-    scheduler,
-) = accelerator.prepare(
-    model, optimizer, training_dataloader, validation_dataloader, lr_scheduler
-)
-
 should_exit = False
 for epoch in range(config.num_epochs):
     model.train()
@@ -474,7 +511,7 @@ for epoch in range(config.num_epochs):
         if epoch == 0 and step < 5:
             print(f"Usage: {monitor.get_gpu_utilization()} GB of GPU")
         optimizer.zero_grad()
-        batch = {k: v for k, v in batch.items()}
+        batch = {k: v.to(device="cuda") for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
         if torch.isnan(loss):
@@ -482,11 +519,9 @@ for epoch in range(config.num_epochs):
             should_exit = True
             break
         total_loss += loss.detach().float()
-        #         loss = loss / config.gradient_accumulation_steps
-        accelerator.backward(loss)
-        #         if (step + 1) % config.gradient_accumulation_steps == 0:
+        loss.backward()
         optimizer.step()
-        scheduler.step()
+        lr_scheduler.step()
 
     if should_exit:
         break
@@ -503,3 +538,6 @@ for epoch in range(config.num_epochs):
     train_epoch_loss = total_loss / len(training_dataloader)
     train_ppl = torch.exp(train_epoch_loss)
     print(f"{epoch=}: {train_ppl=} {train_epoch_loss=} {eval_ppl=} {eval_epoch_loss=}")
+
+reset_global_memory_buffer()
+clear_all_buffers_at_the_end_of_training()
