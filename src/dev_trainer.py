@@ -1,10 +1,9 @@
 import functools
 from functools import partial
-
+from accelerate.utils.deepspeed import HfDeepSpeedConfig as DeepSpeedConfig
 # from lightseq.lightseq_ckpt_monkey_patch import replace_hf_ckpt_with_new_ckpt, clear_all_buffers_at_the_end_of_training
 # replace_hf_ckpt_with_new_ckpt()
 
-from transformers.trainer_pt_utils import LabelSmoother
 from torch.distributed.fsdp.fully_sharded_data_parallel import ShardingStrategy
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from transformers.trainer_pt_utils import get_module_class_from_name
@@ -99,9 +98,6 @@ if torch.cuda.is_available():
     torch.backends.cuda.matmul.allow_tf32 = True
 
 set_seed(1001)
-
-IGNORE_TOKEN_ID = LabelSmoother.ignore_index
-
 
 class Configuration:
     def __init__(self, **kwargs):
